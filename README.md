@@ -7,6 +7,8 @@ This repository contains the reference code for the ICLR 2026 Machine Learning f
 
 `Dataset` - contains the data used for data processing and evaluation.
 
+`Imagery` - contains the imagery used for classification and test.
+
 `Results` - contains the results of data processing and evaluation.
 
-`requirements.txt` - lists the required Python packages to run the code.
+`Requirements.txt` - lists the required Python packages to run the code.
