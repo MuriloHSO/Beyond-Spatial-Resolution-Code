@@ -28,9 +28,9 @@ def setup_paths(base: Path = None) -> dict:
         # src/ lives one level below the repo root
         base = Path(__file__).resolve().parent.parent
 
-    datasets_path = base / "Datasets"
-    images_path = base / "Imagery"
-    results_path = base / "Results"
+    datasets_path = base / "data"
+    images_path = base / "data" / "Imagery"
+    results_path = base / "results"
 
     # Create output sub-directories
     (results_path / "PNG").mkdir(parents=True, exist_ok=True)
@@ -39,7 +39,7 @@ def setup_paths(base: Path = None) -> dict:
     S2_imagery = images_path / "S2"
     PS_imagery = images_path / "PS"
     
-    # Try subfolders first, fallback to root folder matching prefix
+    # Try subfolders first, fallback to root data/ folder matching prefix
     S2_images = glob.glob(str(S2_imagery / "*.tif"))
     if not S2_images:
         S2_images = glob.glob(str(images_path / "S2*.tif"))

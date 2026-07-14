@@ -6,6 +6,8 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 
 `run.py` — Main entry point. Edit the `DEFAULT_*` constants at the top, or pass command-line arguments (see `--help`).
 
+`run.sh` — Bash entry point required by Code Ocean. Calls `run.py` and forwards any CLI arguments.
+
 `src/` - Python package containing all library code:
 - `config.py` — builds the classifiers dictionary
 - `paths.py` — filesystem paths and output directory creation
@@ -14,11 +16,14 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 - `experiments.py` — per-experiment runners and dispatcher
 - `plotting.py` — all figure-generation functions
 
-`Datasets/` - contains the data used for data processing and evaluation.
+`data/` - input data directory (mirrors Code Ocean's `/data`):
+- CSV training and validation datasets (committed to the repository)
+- `Imagery/` — must contain the GeoTIFF imagery downloaded from [Hugging Face](https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code) (not committed)
 
-`Imagery/` - must contain the imagery used for classification and test, that can be downloaded at https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code.
+`results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
+- Classification maps (PNG and TIFF), metric tables, and figures
 
-`Results/` - contains the results of data processing and evaluation.
+`scratch/` - temporary working directory for large intermediate files.
 
 `requirements.txt` - lists the required Python packages to run the code.
 
@@ -44,7 +49,8 @@ All user-facing settings live in [`config.toml`](config.toml):
 | `random_state` | Integer seed for all classifiers |
 | `models` | List of models to run (empty list = all seven) |
 | `skip_plots` | Set to `true` to skip figure generation |
-| `[[experiments]]` | One block per experiment; set `apply_model_on_image` to control full-image classification |
+| `apply_model_on_image` | `true` to classify the full satellite image in every experiment; `false` to skip (faster) |
+| `experiments` | List of experiment names to run |
 
 Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGD`, `SVM_linear`, `SVM_rbf`  
 Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`
@@ -86,7 +92,7 @@ python run.py --config my_config.toml
 ## Running on Code Ocean
 
 On Code Ocean, the capsule expects:
-- **Input data** mounted at `/data/` (place the contents of `Datasets/` here, and optionally `Imagery/`)
+- **Input data** mounted at `/data/` (place the contents of `data/` here, and optionally `data/Imagery/`)
 - **Output results** written to `/results/`
 
 The entry point (`run.py`) automatically detects the Code Ocean environment and adjusts paths accordingly.

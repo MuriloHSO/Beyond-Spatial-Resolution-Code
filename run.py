@@ -81,8 +81,8 @@ _FALLBACK_MODELS: list = []          # empty → all models
 _FALLBACK_EXPERIMENTS = [
     {"name": "S2_4b",   "apply_model_on_image": True},
     {"name": "S2_Allb", "apply_model_on_image": True},
-    {"name": "PS_4b",   "apply_model_on_image": False},
-    {"name": "PS_Allb", "apply_model_on_image": False},
+    {"name": "PS_4b",   "apply_model_on_image": True},
+    {"name": "PS_Allb", "apply_model_on_image": True},
 ]
 
 # ---------------------------------------------------------------------------
@@ -159,20 +159,19 @@ def resolve_config(args) -> dict:
         enabled_models = toml_models if toml_models else None   # [] → None (all)
 
     # --- experiments ---
+    # apply_model_on_image is now a single global boolean in config.toml
+    apply_flag = bool(toml.get("apply_model_on_image", True))
+
     if args.experiments is not None:
-        # CLI wins: experiment names from CLI, image flag from apply_model_on_image list
-        toml_image_set = set(toml.get("apply_model_on_image", []))
+        # CLI wins for experiment selection; use the global TOML boolean for image flag
         selected_experiments = [
-            {"name": name, "apply_model_on_image": name in toml_image_set}
+            {"name": name, "apply_model_on_image": apply_flag}
             for name in args.experiments
         ]
     else:
-        exp_names   = toml.get("experiments", [e["name"] for e in _FALLBACK_EXPERIMENTS])
-        image_set   = set(toml.get("apply_model_on_image",
-                                   [e["name"] for e in _FALLBACK_EXPERIMENTS
-                                    if e["apply_model_on_image"]]))
+        exp_names = toml.get("experiments", [e["name"] for e in _FALLBACK_EXPERIMENTS])
         selected_experiments = [
-            {"name": name, "apply_model_on_image": name in image_set}
+            {"name": name, "apply_model_on_image": apply_flag}
             for name in exp_names
         ]
 
@@ -205,11 +204,13 @@ def resolve_base_path():
     Return the repository root, accounting for Code Ocean's layout.
 
     Code Ocean mounts:
-      /code    — the capsule code directory
-      /data    — input datasets
+      /code    — the capsule code directory (repo root)
+      /data    — input datasets and imagery
       /results — output directory
 
-    Outside Code Ocean the repository root is the parent of this file.
+    Local layout mirrors Code Ocean conventions:
+      <repo>/data/    — CSVs and Imagery/ subfolder
+      <repo>/results/ — output directory
     """
     code_ocean_data    = Path("/data")
     code_ocean_results = Path("/results")
@@ -218,27 +219,84 @@ def resolve_base_path():
         # Running inside Code Ocean
         return Path("/code"), code_ocean_data, code_ocean_results
 
-    # Local execution: everything relative to this file's parent directory
+    # Local execution: mirror Code Ocean conventions relative to this file's parent
     base = Path(__file__).resolve().parent
-    return base, base / "Datasets", base / "Results"
+    return base, base / "data", base / "results"
+
+
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Console output helpers
+# ---------------------------------------------------------------------------
+
+
+def _print_banner():
+    """Print a welcome banner to stdout."""
+    line = "═" * 60
+    print()
+    print(line)
+    print("  Beyond Spatial Resolution")
+    print("  Agricultural Plastic Structures Mapping")
+    print(line)
+    print()
+
+
+def _print_all_done(results_path):
+    """Print the final completion message."""
+    print()
+    print("═" * 60)
+    print(f"  ✓  All done!  →  {results_path}")
+    print("═" * 60)
+    print()
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
-
 def main(argv=None):
     args = parse_args(argv)
     cfg  = resolve_config(args)
 
-    # Use Times New Roman when available; fall back gracefully
+    # ── Welcome ─────────────────────────────────────────────────────────
+    _print_banner()
+    print("Initializing...\n")
+
+    model_names = cfg["enabled_models"] if cfg["enabled_models"] else ALL_MODELS
+    exp_list    = cfg["selected_experiments"]
+    exp_names   = [e["name"] for e in exp_list]
+    any_img     = any(e["apply_model_on_image"] for e in exp_list)
+
+    print(f"  Random state  : {cfg['random_state']}")
+    print(f"  Models        : {', '.join(model_names)}  ({len(model_names)} total)")
+    print(f"  Experiments   : {', '.join(exp_names)}")
+    print(f"  Image classif.: {'enabled' if any_img else 'disabled'}")
+    print(f"  Figures       : {'skipped' if cfg['skip_plots'] else 'enabled'}")
+    print()
+
+    # Build step plan
+    plan_steps = [
+        "Load datasets",
+        f"Run experiments  ({len(exp_list)} exp × {len(model_names)} model(s)"
+        + ("  [+image]" if any_img else "") + ")",
+    ]
+    if not cfg["skip_plots"]:
+        plan_steps.append("Generate figures")
+    total_steps = len(plan_steps)
+
+    print("Planned steps:")
+    for i, s in enumerate(plan_steps, 1):
+        print(f"  [{i}] {s}")
+    print()
+    print("─" * 60)
+
+    # ── Font (silent) ────────────────────────────────────────────
     try:
         rc("font", family="Times New Roman")
     except Exception:
         pass
 
-    # ---- Path setup --------------------------------------------------------
+    # ── Path setup ──────────────────────────────────────────────
     base, datasets_dir, results_dir = resolve_base_path()
 
     # Adjust sys.path so that `from src.xxx import ...` works in all layouts
@@ -267,57 +325,42 @@ def main(argv=None):
         (results_dir / "PNG").mkdir(parents=True, exist_ok=True)
         (results_dir / "TIFF").mkdir(parents=True, exist_ok=True)
 
+    # ── Step 1: Load datasets ──────────────────────────────────
+    print(f"\n[1/{total_steps}] Loading datasets...")
     datasets = load_datasets(paths)
+    print("    ✓ Datasets loaded.\n")
 
-    # ---- Build models from resolved config ---------------------------------
-    models = build_models(cfg["random_state"], cfg["enabled_models"])
-
-    # ---- Print run summary -------------------------------------------------
-    print("=" * 60)
-    print("Running experiments...")
-    print(f"  Random state : {cfg['random_state']}")
-    print(f"  Models       : {list(models.keys())}")
-    print(f"  Experiments  : {[e['name'] for e in cfg['selected_experiments']]}")
-    print("=" * 60)
-
-    # ---- Run experiments ---------------------------------------------------
+    # ── Step 2: Run experiments ────────────────────────────────
+    print(f"[2/{total_steps}] Running experiments...")
+    models  = build_models(cfg["random_state"], cfg["enabled_models"])
     results = run_all_experiments(cfg["selected_experiments"], models, datasets, paths)
-    print("\nCombined results:")
-    print(results.to_string(index=False))
+    print(f"\n    ✓ All experiments complete.")
+    print(f"      Results → {paths['results_path'] / 'model_results.xlsx'}")
 
-    # ---- Generate figures --------------------------------------------------
-    RESULTS_FILE = paths["results_path"] / "model_results.xlsx"
-
+    # ── Step 3 (optional): Generate figures ─────────────────────
     if cfg["skip_plots"]:
-        print("\nFigure generation skipped (skip_plots = true).")
+        _print_all_done(paths["results_path"])
         return
 
+    RESULTS_FILE = paths["results_path"] / "model_results.xlsx"
     if not RESULTS_FILE.exists():
-        print(f"\nWARNING: Results file not found at {RESULTS_FILE}. Skipping figures.")
+        print(f"\n    ⚠  Results file not found at {RESULTS_FILE}. Skipping figures.")
+        _print_all_done(paths["results_path"])
         return
 
-    print("\nGenerating figures...")
+    print(f"\n[3/{total_steps}] Generating figures...")
     plot_data = load_plot_data(RESULTS_FILE)
-
-    # Figure 1 — OA vs Classification Time (both band counts)
     plot_scatter_from_mode(
         plot_data, paths["results_path"],
         mode="both", output_name="Figure1.png", bands=True,
     )
-
-    # Appendix — OA and Kappa grouped bar chart
     plot_oa_kappa_bars(RESULTS_FILE, paths["results_path"])
-
-    # Appendix — PS vs S2 time increase
     plot_satellite_impact(RESULTS_FILE, paths["results_path"])
-
-    # Appendix — all-bands vs 4-bands time increase
     plot_band_impact(RESULTS_FILE, paths["results_path"])
-
-    # Appendix — combined 4-band and all-band scatter panels
     plot_scatter_combined(plot_data, paths["results_path"])
+    print("    ✓ Figures saved.")
 
-    print("\nDone. Outputs written to:", paths["results_path"])
+    _print_all_done(paths["results_path"])
 
 
 if __name__ == "__main__":
