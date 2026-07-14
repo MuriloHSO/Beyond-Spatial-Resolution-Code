@@ -22,6 +22,8 @@ def setup_paths(base: Path = None) -> dict:
     -------
     dict with keys:
         base_path, datasets_path, images_path, results_path,
+        figures_path  — statistical plots from analysis
+        maps_path     — classification maps from imagery (PNG/ and TIFF/ inside)
         S2_imagery, PS_imagery, S2_images, PS_images
     """
     if base is None:
@@ -29,12 +31,15 @@ def setup_paths(base: Path = None) -> dict:
         base = Path(__file__).resolve().parent.parent
 
     datasets_path = base / "data"
-    images_path = base / "data" / "Imagery"
-    results_path = base / "results"
+    images_path   = base / "data" / "Imagery"
+    results_path  = base / "results"
+    figures_path  = results_path / "figures"   # statistical plots from analysis
+    maps_path     = results_path / "maps"      # classification maps from imagery
 
     # Create output sub-directories
-    (results_path / "PNG").mkdir(parents=True, exist_ok=True)
-    (results_path / "TIFF").mkdir(parents=True, exist_ok=True)
+    figures_path.mkdir(parents=True, exist_ok=True)
+    (maps_path / "PNG").mkdir(parents=True, exist_ok=True)
+    (maps_path / "TIFF").mkdir(parents=True, exist_ok=True)
 
     S2_imagery = images_path / "S2"
     PS_imagery = images_path / "PS"
@@ -49,12 +54,14 @@ def setup_paths(base: Path = None) -> dict:
         PS_images = glob.glob(str(images_path / "PS*.tif"))
 
     return {
-        "base_path": base,
+        "base_path":     base,
         "datasets_path": datasets_path,
-        "images_path": images_path,
-        "results_path": results_path,
-        "S2_imagery": S2_imagery,
-        "PS_imagery": PS_imagery,
-        "S2_images": S2_images,
-        "PS_images": PS_images,
+        "images_path":   images_path,
+        "results_path":  results_path,
+        "figures_path":  figures_path,
+        "maps_path":     maps_path,
+        "S2_imagery":    S2_imagery,
+        "PS_imagery":    PS_imagery,
+        "S2_images":     S2_images,
+        "PS_images":     PS_images,
     }

@@ -14,28 +14,28 @@ random_state = 2025
 # To run ALL models, leave the list empty: models = []
 models = [
     "CART",
-    "KNN",
-    "MLP",
-    "RF",
+    #"KNN",
+    #"MLP",
+    #"RF",
     "SGD",
     "SVM_linear",
-    "SVM_rbf",
+    #"SVM_rbf",
 ]
 
 # Whether to generate figures after the experiments.
-skip_plots = true
+skip_plots = false
 
 # -----------------------------------------------------------------------------
 # Experiments
 #
-# experiments        : which experiments to run.
-#                      Valid: "S2_4b", "S2_Allb", "PS_4b", "PS_Allb"
-#                      Comment out or remove names to skip them.
+# experiments          : which experiments to run.
+#                        Valid: "S2_4b", "S2_Allb", "PS_4b", "PS_Allb"
+#                        Comment out or remove names to skip them.
 #
-# apply_model_on_image : subset of experiments that should also classify the
-#                        full satellite image. Requires imagery files in
-#                        Imagery/. Remove a name here to skip image
-#                        classification for that experiment (faster).
+# apply_model_on_image : if true, every experiment will also classify the
+#                        full satellite image (requires imagery files in
+#                        Imagery/). Set to false for a faster run without
+#                        image classification.
 # -----------------------------------------------------------------------------
 
 experiments = [
@@ -45,9 +45,4 @@ experiments = [
     "PS_Allb",
 ]
 
-apply_model_on_image = [
-    "S2_4b",
-    "S2_Allb",
-    "PS_4b",    # commented out → image classification disabled for PS_4b
-    "PS_Allb",  # commented out → image classification disabled for PS_Allb
-]
+apply_model_on_image = true

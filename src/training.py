@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import rasterio
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import accuracy_score, cohen_kappa_score, confusion_matrix, make_scorer
+from sklearn.metrics import accuracy_score, cohen_kappa_score, make_scorer
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.preprocessing import StandardScaler
 from matplotlib import colors
@@ -79,7 +79,7 @@ def train_and_evaluate_model(
 
     if apply_model_on_image:
         if imagery is None:
-            print(f"WARNING: apply_model_on_image=True but no image found for {name}. Skipping classification.")
+            print(f"    [!]  No imagery file found for '{name}' - image classification skipped.")
             apply_model_on_image = False
         else:
             # Load image only when explicit image classification is requested
@@ -125,13 +125,11 @@ def train_and_evaluate_model(
             # Free memory
             del image, img, image_reshaped, image_imputed
             gc.collect()
-    else:
-        print("apply_model_on_image=False: skipping image reading and classification.")
-
     # Train and evaluate models
     params = []
     results = []
-    for model_name, model in models.items():
+    n_models = len(models)
+    for model_idx, (model_name, model) in enumerate(models.items(), 1):
         # K-Fold variability on training data
         cv_acc_scores = cross_val_score(
             model, X_train_norm, y_train, cv=kfold, scoring="accuracy", n_jobs=-1
@@ -174,21 +172,14 @@ def train_and_evaluate_model(
         # Metrics
         accuracy = round(accuracy_score(y_test, y_pred), 6)
         kappa = round(cohen_kappa_score(y_test, y_pred), 6)
+        bullet  = "\\-" if model_idx == n_models else "+-"
+        img_str = f"{classification_time:.3f}s" if apply_model_on_image else "-"
         print(
-            f"{model_name} - Imagery: {filename}\n"
-            f"Accuracy: {accuracy}\n"
-            f"Accuracy Std (KFold): {accuracy_std}\n"
-            f"Kappa: {kappa}\n"
-            f"Kappa Std (KFold): {kappa_std}\n"
-            f"Training Time: {round(training_time, 6)} seconds\n"
-            f"Training Time Std: {training_time_std} seconds\n"
-            f"Validation Time: {round(validation_time, 6)} seconds\n"
-            f"Validation Time Std: {validation_time_std} seconds\n"
-            f"Classification Time: {round(classification_time, 6) if apply_model_on_image else 'Skipped'} seconds\n"
-            f"Classification Time Std: {classification_time_std if apply_model_on_image else 'Skipped'} seconds"
+            f"  {bullet} [{model_idx}/{n_models}] {model_name:<12}"
+            f"  train {training_time:.3f}s"
+            f"  valid {validation_time:.3f}s"
+            f"  classif {img_str}  [OK]"
         )
-        print(pd.DataFrame(confusion_matrix(y_test, y_pred)))
-        print("-" * 40)
 
         params.append(model.get_params(deep=True))
         results.append(

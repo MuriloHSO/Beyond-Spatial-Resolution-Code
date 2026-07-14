@@ -48,7 +48,7 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
 
     imagery = paths["S2_images"][0] if paths["S2_images"] else None
     params, results = train_and_evaluate_model(
-        X, X2, y, y2, models, imagery, paths["results_path"],
+        X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="S2_1",
     )
@@ -65,7 +65,7 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
 
     imagery = paths["S2_images"][0] if paths["S2_images"] else None
     params, results = train_and_evaluate_model(
-        X, X2, y, y2, models, imagery, paths["results_path"],
+        X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="S2_2",
     )
@@ -82,7 +82,7 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
 
     imagery = paths["PS_images"][0] if paths["PS_images"] else None
     params, results = train_and_evaluate_model(
-        X, X2, y, y2, models, imagery, paths["results_path"],
+        X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="PS_1",
     )
@@ -99,7 +99,7 @@ def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, s
 
     imagery = paths["PS_images"][0] if paths["PS_images"] else None
     params, results = train_and_evaluate_model(
-        X, X2, y, y2, models, imagery, paths["results_path"],
+        X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="PS_2",
     )
@@ -150,8 +150,9 @@ def run_all_experiments(selected_experiments: list, models: dict, datasets: dict
         ``results_path/model_results.xlsx``.
     """
     selected_results = []
+    n_exps = len(selected_experiments)
 
-    for item in selected_experiments:
+    for exp_i, item in enumerate(selected_experiments, 1):
         name = item["name"]
         apply_flag = item.get("apply_model_on_image", True)
 
@@ -159,6 +160,9 @@ def run_all_experiments(selected_experiments: list, models: dict, datasets: dict
             raise ValueError(
                 f"Unknown experiment '{name}'. Valid options: {list(EXPERIMENT_QUEUE.keys())}"
             )
+
+        img_note = "  [+image]" if apply_flag else ""
+        print(f"\n  + [{exp_i}/{n_exps}] {name}{img_note}")
 
         _params, results_i = EXPERIMENT_QUEUE[name](
             models=models,

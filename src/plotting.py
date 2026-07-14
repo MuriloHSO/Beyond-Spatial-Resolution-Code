@@ -354,7 +354,7 @@ def plot_scatter_from_mode(
     plot_data,
     results_path,
     mode="both",
-    output_name="FigRes.png",
+    output_name="Figure 1.png",
     marker_scale_factor=1.5,
     min_point_size=18,
     save_dpi=600,
@@ -658,7 +658,7 @@ def plot_oa_kappa_bars(results_file, results_path):
     ax2.set_xticklabels(final_models, rotation=45, ha="right")
     ax2.set_xlabel("Models")
 
-    output_name = "fig_appendix_OA_k_S2vsPS_ML4RS"
+    output_name = "Figure B.4"
     plt.savefig(results_path / f"{output_name}.png", dpi=400, bbox_inches="tight", pad_inches=0.02)
     plt.show()
 
@@ -767,10 +767,10 @@ def plot_satellite_impact(results_file, results_path):
 
     plt.tight_layout()
     plt.grid(True, which="major", linestyle="--", linewidth=0.5)
-    plt.savefig(results_path / "dif_tt_ict_satellite_impact_avg_std.png", dpi=400)
+    plt.savefig(results_path / "Figure B.2.png", dpi=400)
     plt.show()
 
-    print(sat_diff_df[["Model", "Dif tt (%)", "tt_std_pct", "Dif ct (%)", "ct_std_pct"]])
+    #print(sat_diff_df[["Model", "Dif tt (%)", "tt_std_pct", "Dif ct (%)", "ct_std_pct"]])
 
 
 # ---------------------------------------------------------------------------
@@ -780,7 +780,7 @@ def plot_satellite_impact(results_file, results_path):
 def plot_band_impact(results_file, results_path):
     """
     Bar chart comparing all-bands vs 4-bands training/classification time (%).
-    Saved to ``dif_tt_ict_mean_bands.png``.
+    Saved to ``Figure B.3.png``.
     """
     df_local = load_results_dataframe(results_file)
     df_metrics_local, imagery_col, model_col, ct_col, tt_col = build_time_metrics_dataframe(df_local)
@@ -856,7 +856,7 @@ def plot_band_impact(results_file, results_path):
 
     plt.tight_layout()
     plt.grid(True, which="major", linestyle="--", linewidth=0.5)
-    plt.savefig(results_path / "dif_tt_ict_mean_bands.png", dpi=400)
+    plt.savefig(results_path / "Figure B.3.png", dpi=400)
     plt.show()
 
 
@@ -867,13 +867,13 @@ def plot_band_impact(results_file, results_path):
 def plot_scatter_combined(plot_data, results_path):
     """
     Two-panel figure combining 4-band and all-band scatter plots.
-    Saved to ``fig_appendix_scatter_4_and_all.png``.
+    Saved to ``Figure B.1.png``.
     """
     plot_scatter_from_mode(plot_data, results_path, mode="4",   output_name="FigRes4Bands.png", show_xlabel=False, bands=False)
-    plot_scatter_from_mode(plot_data, results_path, mode="all", output_name="FigResall.png",    bands=False)
+    plot_scatter_from_mode(plot_data, results_path, mode="all", output_name="FigResAllBands.png",    bands=False)
 
     img_4_path   = results_path / "FigRes4Bands.png"
-    img_all_path = results_path / "FigResall.png"
+    img_all_path = results_path / "FigResAllBands.png"
     if not img_4_path.exists() or not img_all_path.exists():
         raise FileNotFoundError("Scatter PNGs not found.")
 
@@ -906,7 +906,7 @@ def plot_scatter_combined(plot_data, results_path):
         zorder=30,
     )
 
-    output_name_scatter = "fig_appendix_scatter_4_and_all"
+    output_name_scatter = "Figure B.1"
     fig2.savefig(results_path / f"{output_name_scatter}.png", dpi=400, bbox_inches="tight", pad_inches=0.02)
     plt.show()
-    print(f"Figure: {output_name_scatter}.png")
+    #print(f"Figure: {output_name_scatter}.png")
