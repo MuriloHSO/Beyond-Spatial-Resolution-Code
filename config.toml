@@ -13,17 +13,17 @@ random_state = 2025
 # Valid options: "CART", "KNN", "MLP", "RF", "SGD", "SVM_linear", "SVM_rbf"
 # To run ALL models, leave the list empty: models = []
 models = [
-    # "CART",
-    # "KNN",
-    # "MLP",
-    # "RF",
-    # "SGD",
-    # "SVM_linear",
+    "CART",
+    "KNN",
+    "MLP",
+    "RF",
+    "SGD",
+    "SVM_linear",
     "SVM_rbf",
 ]
 
 # Whether to generate figures after the experiments.
-skip_plots = false
+skip_plots = true
 
 # -----------------------------------------------------------------------------
 # Experiments
@@ -46,8 +46,8 @@ experiments = [
 ]
 
 apply_model_on_image = [
-    # "S2_4b",
-    # "S2_Allb",
-    # "PS_4b",    # commented out → image classification disabled for PS_4b
-    # "PS_Allb",  # commented out → image classification disabled for PS_Allb
+    "S2_4b",
+    "S2_Allb",
+    "PS_4b",    # commented out → image classification disabled for PS_4b
+    "PS_Allb",  # commented out → image classification disabled for PS_Allb
 ]
