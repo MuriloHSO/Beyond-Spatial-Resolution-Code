@@ -58,8 +58,8 @@ def pick_column(df, candidates, label):
             return normalized_map[normalized]
 
     raise ValueError(
-        f"Nao encontrei a coluna de {label}. Candidatas: {candidates}. "
-        f"Colunas disponiveis: {list(df.columns)}"
+        f"Column for '{label}' not found. Candidates: {candidates}. "
+        f"Available columns: {list(df.columns)}"
     )
 
 
@@ -138,13 +138,13 @@ def pick_low_high_imagery(condition_names):
 
 def load_results_dataframe(results_file):
     if not Path(results_file).exists():
-        raise FileNotFoundError(f"Arquivo nao encontrado: {results_file}")
+        raise FileNotFoundError(f"Results file not found: {results_file}")
     return pd.read_excel(results_file)
 
 
 def resolve_time_columns(df_results):
     imagery_col = pick_column(df_results, ["Imagery", "imagery", "Condition", "Dataset", "Image"], "imagery")
-    model_col = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "modelo")
+    model_col = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "model")
     ct_col = pick_column(
         df_results,
         [
@@ -235,7 +235,7 @@ def load_plot_data(results_file):
     df_results = load_results_dataframe(results_file)
 
     imagery_col = pick_column(df_results, ["Imagery", "imagery", "Condition", "Dataset", "Image"], "imagery")
-    model_col = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "modelo")
+    model_col = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "model")
     oa_col = pick_column(df_results, ["OA", "Overall Accuracy", "overall_accuracy", "Accuracy"], "OA")
     ct_col = pick_column(
         df_results,
@@ -282,7 +282,7 @@ def load_plot_data(results_file):
     )
 
     if grouped.empty:
-        raise ValueError("Nenhum dado valido foi carregado do arquivo XLSX.")
+        raise ValueError("No valid data was loaded from the XLSX file.")
 
     imagery_names = [str(x).strip() for x in grouped[imagery_col].unique()]
     all_data = nested_dict_from_grouped(grouped, imagery_col, model_col, oa_col, ct_col, tt_col)
@@ -378,11 +378,11 @@ def plot_scatter_from_mode(
         Whether to show the band legend.
     """
     if mode not in {"both", "all", "4"}:
-        raise ValueError("mode deve ser 'both', 'all' ou '4'.")
+        raise ValueError("mode must be 'both', 'all' or '4'.")
 
     data = plot_data["data_by_mode"].get(mode, {})
     if not data:
-        raise ValueError(f"Nenhum dado encontrado para o modo '{mode}'.")
+        raise ValueError(f"No data found for mode '{mode}'.")
 
     plt.rcParams["font.family"] = "serif"
     plt.figure(figsize=(10, 6))
@@ -536,7 +536,7 @@ def plot_oa_kappa_bars(results_file, results_path):
 
     df_results = load_results_dataframe(results_file)
     imagery_col_local = pick_column(df_results, ["Imagery", "imagery", "Condition", "Dataset", "Image"], "imagery")
-    model_col_local = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "modelo")
+    model_col_local = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "model")
     df_results = df_results.rename(columns={imagery_col_local: "Imagery", model_col_local: "Models"})
     df_results["Models"] = df_results["Models"].map(normalize_model_name)
 
@@ -559,14 +559,14 @@ def plot_oa_kappa_bars(results_file, results_path):
 
     def prepare_metric_frames(df_in, metric_col, std_col):
         if metric_col not in df_in.columns:
-            raise ValueError(f"Coluna obrigatoria nao encontrada: {metric_col}")
+            raise ValueError(f"Required column not found: {metric_col}")
         if std_col is None:
-            raise ValueError(f"Nao encontrei coluna de desvio padrao para {metric_col}.")
+            raise ValueError(f"Standard deviation column not found for {metric_col}.")
 
         s2_low, s2_high = pick_conditions(df_in, "S2")
         ps_low, ps_high = pick_conditions(df_in, "PS")
         if None in [s2_low, s2_high, ps_low, ps_high]:
-            raise ValueError("Nao foi possivel identificar duas condicoes para S2 e PS.")
+            raise ValueError("Could not identify two conditions for S2 and PS.")
 
         def get_cond_df(cond_name):
             out = df_in[df_in["Imagery"].astype(str) == cond_name][["Models", metric_col, std_col]].copy()
@@ -586,7 +586,7 @@ def plot_oa_kappa_bars(results_file, results_path):
         common_models = common_models + extra_models
 
         if not common_models:
-            raise ValueError(f"Nao ha modelos em comum para {metric_col}.")
+            raise ValueError(f"No common models found for {metric_col}.")
 
         return {
             "models": common_models,
@@ -607,7 +607,7 @@ def plot_oa_kappa_bars(results_file, results_path):
 
     final_models = [m for m in oa_data["models"] if m in set(kappa_data["models"])]
     if not final_models:
-        raise ValueError("Nao ha modelos em comum entre OA e Kappa para montar a figura combinada.")
+        raise ValueError("No common models found between OA and Kappa to build the combined figure.")
 
     for key in ["s2_low", "s2_high", "ps_low", "ps_high"]:
         oa_data[key]    = oa_data[key].loc[final_models]
@@ -724,7 +724,7 @@ def plot_satellite_impact(results_file, results_path):
 
     sat_merge = s2_stats.merge(ps_stats, on=model_col, suffixes=("_s2", "_ps"))
     if sat_merge.empty:
-        raise ValueError("Nao foi possivel calcular comparacao PS_mean vs S2_mean para os modelos.")
+        raise ValueError("Could not compute PS mean vs S2 mean comparison for the models.")
 
     sat_merge["Dif tt (%)"] = pct_diff(sat_merge[f"{tt_col}_ps"].values, sat_merge[f"{tt_col}_s2"].values)
     sat_merge["Dif ct (%)"] = pct_diff(sat_merge[f"{ct_col}_ps"].values, sat_merge[f"{ct_col}_s2"].values)
@@ -817,7 +817,7 @@ def plot_band_impact(results_file, results_path):
             })
 
     if not rows_band:
-        raise ValueError("Nao foi possivel calcular diferencas TT/ICT por bandas para S2 e PS.")
+        raise ValueError("Could not compute TT/ICT differences by band count for S2 and PS.")
 
     diff_df_bands = pd.DataFrame(rows_band)
     model_order = order_models(diff_df_bands["Model"].unique())

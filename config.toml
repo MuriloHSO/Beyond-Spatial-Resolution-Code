@@ -1,0 +1,53 @@
+# =============================================================================
+# Beyond Spatial Resolution — User Configuration
+#
+# Edit this file to control which models and experiments are run.
+# Then simply execute:  python run.py
+# =============================================================================
+
+# Random seed used by all classifiers that accept a random_state argument.
+random_state = 2025
+
+# Models to run.
+# Comment out or remove names to disable specific models.
+# Valid options: "CART", "KNN", "MLP", "RF", "SGD", "SVM_linear", "SVM_rbf"
+# To run ALL models, leave the list empty: models = []
+models = [
+    # "CART",
+    # "KNN",
+    # "MLP",
+    # "RF",
+    # "SGD",
+    # "SVM_linear",
+    "SVM_rbf",
+]
+
+# Whether to generate figures after the experiments.
+skip_plots = false
+
+# -----------------------------------------------------------------------------
+# Experiments
+#
+# experiments        : which experiments to run.
+#                      Valid: "S2_4b", "S2_Allb", "PS_4b", "PS_Allb"
+#                      Comment out or remove names to skip them.
+#
+# apply_model_on_image : subset of experiments that should also classify the
+#                        full satellite image. Requires imagery files in
+#                        Imagery/. Remove a name here to skip image
+#                        classification for that experiment (faster).
+# -----------------------------------------------------------------------------
+
+experiments = [
+    "S2_4b",
+    "S2_Allb",
+    "PS_4b",
+    "PS_Allb",
+]
+
+apply_model_on_image = [
+    # "S2_4b",
+    # "S2_Allb",
+    # "PS_4b",    # commented out → image classification disabled for PS_4b
+    # "PS_Allb",  # commented out → image classification disabled for PS_Allb
+]

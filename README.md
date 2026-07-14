@@ -4,7 +4,7 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 
 ## Repository Structure
 
-`code.ipynb` - Control panel notebook. Edit only **Cell 0** to choose models, the random state, and whether to apply classification on the full imagery. All other cells run unchanged.
+`run.py` — Main entry point. Edit the `DEFAULT_*` constants at the top, or pass command-line arguments (see `--help`).
 
 `src/` - Python package containing all library code:
 - `config.py` — builds the classifiers dictionary
@@ -26,7 +26,72 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 
 ```bash
 pip install -r requirements.txt
-jupyter notebook code.ipynb
 ```
 
-Open `code.ipynb`, edit **Cell 0** as needed, then run all cells.
+1. Open [`config.toml`](config.toml) and choose your models, experiments and settings.
+2. Run:
+
+```bash
+python run.py
+```
+
+## Configuration (`config.toml`)
+
+All user-facing settings live in [`config.toml`](config.toml):
+
+| Key | Description |
+|-----|-------------|
+| `random_state` | Integer seed for all classifiers |
+| `models` | List of models to run (empty list = all seven) |
+| `skip_plots` | Set to `true` to skip figure generation |
+| `[[experiments]]` | One block per experiment; set `apply_model_on_image` to control full-image classification |
+
+Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGD`, `SVM_linear`, `SVM_rbf`  
+Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`
+
+## Command-Line Overrides
+
+CLI arguments override any value in `config.toml`:
+
+```
+python run.py --help
+
+Options:
+  --config PATH               Path to an alternative TOML config file
+  --random-state INT          Random seed for classifiers
+  --models MODEL [MODEL ...]  Models to run
+  --experiments EXP [EXP ...] Experiments to run
+  --apply-on-image            Force full-image classification for all experiments
+  --no-image                  Disable full-image classification for all experiments
+  --skip-plots                Skip figure generation
+```
+
+### Examples
+
+Run all experiments without image classification (faster):
+```bash
+python run.py --no-image
+```
+
+Run only Sentinel-2 experiments with the Random Forest model:
+```bash
+python run.py --experiments S2_4b S2_Allb --models RF
+```
+
+Use a custom config file:
+```bash
+python run.py --config my_config.toml
+```
+
+## Running on Code Ocean
+
+On Code Ocean, the capsule expects:
+- **Input data** mounted at `/data/` (place the contents of `Datasets/` here, and optionally `Imagery/`)
+- **Output results** written to `/results/`
+
+The entry point (`run.py`) automatically detects the Code Ocean environment and adjusts paths accordingly.
+Set the capsule's **run command** to:
+```
+python run.py
+```
+or pass any of the options above.
