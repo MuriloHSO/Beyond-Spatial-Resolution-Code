@@ -1,4 +1,4 @@
-# hash:sha256:4fb45452052ee461b51de861d5fd90b5bd6e73215af211d6dbffa60fe584097e
+# hash:sha256:a10ad140de368b827b7766357a12cfd2c0d3caceb4823601500306d7e3bfe214
 FROM registry.codeocean.com/codeocean/ubuntu:22.04.1
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -15,4 +15,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install -U --no-cache-dir \
-    rasterio==latest
+    matplotlib==latest \
+    numpy==latest \
+    openpyxl==latest \
+    pandas==latest \
+    rasterio==latest \
+    scikit-learn

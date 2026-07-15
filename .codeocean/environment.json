@@ -37,8 +37,27 @@
 		"pip3": {
 			"packages": [
 				{
+					"name": "matplotlib",
+					"version": "latest"
+				},
+				{
+					"name": "numpy",
+					"version": "latest"
+				},
+				{
+					"name": "openpyxl",
+					"version": "latest"
+				},
+				{
+					"name": "pandas",
+					"version": "latest"
+				},
+				{
 					"name": "rasterio",
 					"version": "latest"
+				},
+				{
+					"name": "scikit-learn"
 				}
 			],
 			"options": {},
