@@ -6,6 +6,22 @@
 		"apt": {
 			"packages": [
 				{
+					"name": "gdal-bin",
+					"version": "latest"
+				},
+				{
+					"name": "libgdal-dev",
+					"version": "latest"
+				},
+				{
+					"name": "python3",
+					"version": "latest"
+				},
+				{
+					"name": "python3-dev",
+					"version": "latest"
+				},
+				{
 					"name": "python3-pip",
 					"version": "latest"
 				},
@@ -17,6 +33,16 @@
 				}
 			],
 			"install_software_properties_common": true
+		},
+		"pip3": {
+			"packages": [
+				{
+					"name": "rasterio",
+					"version": "latest"
+				}
+			],
+			"options": {},
+			"pre_install_options": {}
 		}
 	}
 }
