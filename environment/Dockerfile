@@ -1,11 +1,11 @@
-# hash:sha256:fec95480dfb261dd4a20bde6597748f56b6adf499d6a7521b424af23a2f93dd4
-FROM registry.codeocean.com/codeocean/py-r:python3.12.8-R4.4.2-JupyterLab4.3.5-RStudiorstudio-server-2024.12.1-563-ubuntu22.04
+# hash:sha256:ab000e01782d338df8aeeb66a792c631b484f095cdcbd98b74001d9b0f903513
+FROM registry.codeocean.com/codeocean/ubuntu:22.04.1
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN conda install -y \
-        gcc==latest \
-    && conda clean -ya
-
-RUN pip install -U --no-cache-dir \
-    gcc==latest
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3-pip=latest \
+        python3-setuptools \
+        python3-wheel \
+    && rm -rf /var/lib/apt/lists/*

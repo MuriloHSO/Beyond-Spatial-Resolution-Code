@@ -1,25 +1,22 @@
 {
 	"version": 1,
-	"base_image": "registry.codeocean.com/codeocean/py-r:python3.12.8-R4.4.2-JupyterLab4.3.5-RStudiorstudio-server-2024.12.1-563-ubuntu22.04",
+	"base_image": "registry.codeocean.com/codeocean/ubuntu:22.04.1",
 	"options": {},
 	"installers": {
-		"conda": {
+		"apt": {
 			"packages": [
 				{
-					"name": "gcc",
+					"name": "python3-pip",
 					"version": "latest"
-				}
-			]
-		},
-		"pip": {
-			"packages": [
+				},
 				{
-					"name": "gcc",
-					"version": "latest"
+					"name": "python3-setuptools"
+				},
+				{
+					"name": "python3-wheel"
 				}
 			],
-			"options": {},
-			"pre_install_options": {}
+			"install_software_properties_common": true
 		}
 	}
 }
