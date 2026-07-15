@@ -7,33 +7,35 @@
 			"packages": [
 				{
 					"name": "build-essential",
-					"version": "latest"
+					"version": "12.9ubuntu3"
 				},
 				{
 					"name": "gdal-bin",
-					"version": "latest"
+					"version": "3.4.1+dfsg-1build4"
 				},
 				{
 					"name": "libgdal-dev",
-					"version": "latest"
+					"version": "3.4.1+dfsg-1build4"
 				},
 				{
 					"name": "python3",
-					"version": "latest"
+					"version": "3.10.6-1~22.04.1"
 				},
 				{
 					"name": "python3-dev",
-					"version": "latest"
+					"version": "3.10.6-1~22.04.1"
 				},
 				{
 					"name": "python3-pip",
-					"version": "latest"
+					"version": "22.0.2+dfsg-1ubuntu0.7"
 				},
 				{
-					"name": "python3-setuptools"
+					"name": "python3-setuptools",
+					"version": "59.6.0-1.2ubuntu0.22.04.3"
 				},
 				{
-					"name": "python3-wheel"
+					"name": "python3-wheel",
+					"version": "0.37.1-2ubuntu0.22.04.1"
 				}
 			],
 			"install_software_properties_common": true
@@ -42,26 +44,27 @@
 			"packages": [
 				{
 					"name": "matplotlib",
-					"version": "latest"
+					"version": "3.10.9"
 				},
 				{
 					"name": "numpy",
-					"version": "latest"
+					"version": "2.2.6"
 				},
 				{
 					"name": "openpyxl",
-					"version": "latest"
+					"version": "3.1.5"
 				},
 				{
 					"name": "pandas",
-					"version": "latest"
+					"version": "2.3.3"
 				},
 				{
 					"name": "rasterio",
-					"version": "latest"
+					"version": "1.4.4"
 				},
 				{
-					"name": "scikit-learn"
+					"name": "scikit-learn",
+					"version": "1.7.2"
 				}
 			],
 			"options": {},
