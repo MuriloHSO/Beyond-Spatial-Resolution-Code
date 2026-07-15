@@ -459,7 +459,7 @@ if __name__ == "__main__":
         else _base_dir / "results"
     )
     _results_dir.mkdir(parents=True, exist_ok=True)
-    _log_path = _base_dir / "run.log"
+    _log_path = "/results/run.log"
 
     _log_file = open(_log_path, "w", encoding="utf-8", buffering=1)
     _header = (
