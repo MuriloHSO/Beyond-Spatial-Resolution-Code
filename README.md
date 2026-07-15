@@ -23,9 +23,10 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 `results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
 - Classification maps (PNG and TIFF), metric tables, and figures
 
-`scratch/` - temporary working directory for large intermediate files.
-
 `requirements.txt` - lists the required Python packages to run the code.
+```bash
+pip install -r requirements.txt
+```
 
 ## Quick Start
 1. Clone this repository: 
