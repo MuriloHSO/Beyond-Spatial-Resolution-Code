@@ -6,6 +6,10 @@
 		"apt": {
 			"packages": [
 				{
+					"name": "build-essential",
+					"version": "latest"
+				},
+				{
 					"name": "gdal-bin",
 					"version": "latest"
 				},

@@ -1,10 +1,11 @@
-# hash:sha256:a10ad140de368b827b7766357a12cfd2c0d3caceb4823601500306d7e3bfe214
+# hash:sha256:2ba5f41b0512e551e2073ab9daf47fdef8155cf3c56a713d25c1ef3c05b96b19
 FROM registry.codeocean.com/codeocean/ubuntu:22.04.1
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        build-essential=latest \
         gdal-bin=latest \
         libgdal-dev=latest \
         python3=latest \
