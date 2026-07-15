@@ -9,4 +9,4 @@ set -ex
 #
 # Any extra arguments are forwarded to run.py (e.g. --no-image, --models RF).
 
-python run.py "$@"
+python3 run.py "$@"
