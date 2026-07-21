@@ -45,4 +45,4 @@ experiments = [
     "PS_Allb",
 ]
 
-apply_model_on_image = true
+apply_model_on_image = false
