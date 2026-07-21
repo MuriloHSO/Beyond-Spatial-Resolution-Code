@@ -43,7 +43,8 @@
 		"pip3": {
 			"packages": [
 				{
-					"name": "huggingface-hub"
+					"name": "huggingface-hub",
+					"version": "1.24.0"
 				},
 				{
 					"name": "matplotlib",

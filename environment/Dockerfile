@@ -1,4 +1,4 @@
-# hash:sha256:ff3742b16a3820f3cd8035b39da49d83f34bf0b7aab43d68e141e3ffaf60efd6
+# hash:sha256:1db806a29d10737fd9c45b7c00f30bd334b3f781b2841b86087366f14bb68be5
 FROM registry.codeocean.com/codeocean/ubuntu:22.04.1
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -16,7 +16,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install -U --no-cache-dir \
-    huggingface-hub \
+    huggingface-hub==1.24.0 \
     matplotlib==3.10.9 \
     numpy==2.2.6 \
     openpyxl==3.1.5 \
