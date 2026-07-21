@@ -7,12 +7,16 @@ echo "Downloading imagery from Hugging Face..."
 # 1. Run inline python to download the Imagery folder
 python3 -c "
 from huggingface_hub import snapshot_download
-snapshot_download(
-    repo_id='MuriloHSO/Beyond-Spatial-Resolution-Code',
-    repo_type='dataset',
-    allow_patterns='Imagery/*',
-    local_dir='/tmp/hf_download'
-)
+
+try:
+    local_dir = snapshot_download(
+        repo_id="MuriloHSO/Beyond-Spatial-Resolution-Code",
+        repo_type="dataset",
+    )
+    print("Downloaded to:", local_dir)
+except Exception as e:
+    import traceback
+    traceback.print_exc()
 "
 
 # 2. Copy the files into the relative data directory one level up (../data)
