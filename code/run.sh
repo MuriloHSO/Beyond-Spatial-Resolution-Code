@@ -15,19 +15,22 @@ snapshot_download(
 )
 "
 
-# 2. Check if folders are uppercase or lowercase in /tmp and copy contents
+# 2. Copy the files inside the downloaded subfolders into the relative data directories (no leading slash)
 if [ -d "/tmp/hf_download/Imagery/PS" ]; then
-    cp -r /tmp/hf_download/Imagery/PS/. /data/Imagery/PS/
-    cp -r /tmp/hf_download/Imagery/S2/. /data/Imagery/S2/
+    cp -r /tmp/hf_download/Imagery/PS/. data/Imagery/PS/
+    cp -r /tmp/hf_download/Imagery/S2/. data/Imagery/S2/
 elif [ -d "/tmp/hf_download/imagery/ps" ]; then
-    cp -r /tmp/hf_download/imagery/ps/. /data/Imagery/PS/
-    cp -r /tmp/hf_download/imagery/s2/. /data/Imagery/S2/
+    cp -r /tmp/hf_download/imagery/ps/. data/Imagery/PS/
+    cp -r /tmp/hf_download/imagery/s2/. data/Imagery/S2/
 fi
 
-# 3. Debug line: Print the contents of the target folder to ensure the files are there
-echo "Checking target data directories:"
-ls -la /data/Imagery/PS/
-ls -la /data/Imagery/S2/
+# 3. Debug line: Print the contents to verify they are in the relative workspace path
+echo "Checking relative target data directories:"
+ls -la data/Imagery/PS/
+ls -la data/Imagery/S2/
+
+# Force stdout to flush immediately so we can see the debug logs in order
+export PYTHONUNBUFFERED=1
 
 echo "Running experiments..."
 python3 run.py "$@"
