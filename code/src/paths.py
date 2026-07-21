@@ -1,67 +1,151 @@
 """
 paths.py
---------
-All filesystem path definitions and directory creation.
+
+Utilities for defining and managing the directory structure used by the
+Beyond Spatial Resolution project.
 """
 
-import glob
 from pathlib import Path
 
 
-def setup_paths(base: Path = None) -> dict:
+def setup_paths(base: Path | str | None = None) -> dict:
     """
-    Resolve every path used by the project and create output directories.
+    Create and return all project paths.
 
     Parameters
     ----------
-    base : Path, optional
-        Root of the project.  Defaults to the parent of this file (i.e. the
-        repository root when the package lives in ``<repo>/src/``).
+    base : Path | str | None
+        Project root directory.
+        If None, uses the parent directory of this file.
 
     Returns
     -------
-    dict with keys:
-        base_path, datasets_path, images_path, results_path,
-        figures_path  — statistical plots from analysis
-        maps_path     — classification maps from imagery (PNG/ and TIFF/ inside)
-        S2_imagery, PS_imagery, S2_images, PS_images
+    dict
+        Dictionary containing all project directories.
     """
+
     if base is None:
-        # src/ lives one level below the repo root
         base = Path(__file__).resolve().parent.parent
+    else:
+        base = Path(base)
 
-    datasets_path = base / "data"
-    images_path   = base / "data" / "Imagery"
-    results_path  = base / "results"
-    figures_path  = results_path / "figures"   # statistical plots from analysis
-    maps_path     = results_path / "maps"      # classification maps from imagery
+    # ------------------------------------------------------------------
+    # Input data
+    # ------------------------------------------------------------------
 
-    # Create output sub-directories
-    figures_path.mkdir(parents=True, exist_ok=True)
-    (maps_path / "PNG").mkdir(parents=True, exist_ok=True)
-    (maps_path / "TIFF").mkdir(parents=True, exist_ok=True)
+    data_path = base / "data"
+
+    datasets_path = data_path / "Datasets"
+
+    images_path = data_path / "Imagery"
 
     S2_imagery = images_path / "S2"
+
     PS_imagery = images_path / "PS"
-    
-    # Try subfolders first, fallback to root data/ folder matching prefix
-    S2_images = glob.glob(str(S2_imagery / "*.tif"))
-    if not S2_images:
-        S2_images = glob.glob(str(images_path / "S2*.tif"))
-        
-    PS_images = glob.glob(str(PS_imagery / "*.tif"))
-    if not PS_images:
-        PS_images = glob.glob(str(images_path / "PS*.tif"))
+
+    # ------------------------------------------------------------------
+    # Outputs
+    # ------------------------------------------------------------------
+
+    results_path = base / "results"
+
+    figures_path = results_path / "Figures"
+
+    maps_path = results_path / "Maps"
+
+    maps_png_path = maps_path / "PNG"
+
+    maps_tif_path = maps_path / "TIFF"
+
+    models_path = results_path / "Models"
+
+    logs_path = results_path / "Logs"
+
+    metadata_path = results_path / "Metadata"
+
+    # ------------------------------------------------------------------
+    # Create directories
+    # ------------------------------------------------------------------
+
+    directories = [
+        data_path,
+        datasets_path,
+        images_path,
+        S2_imagery,
+        PS_imagery,
+        results_path,
+        figures_path,
+        maps_path,
+        maps_png_path,
+        maps_tif_path,
+        models_path,
+        logs_path,
+        metadata_path,
+    ]
+
+    for directory in directories:
+        directory.mkdir(parents=True, exist_ok=True)
 
     return {
-        "base_path":     base,
+        "base": base,
+
+        "data_path": data_path,
         "datasets_path": datasets_path,
-        "images_path":   images_path,
-        "results_path":  results_path,
-        "figures_path":  figures_path,
-        "maps_path":     maps_path,
-        "S2_imagery":    S2_imagery,
-        "PS_imagery":    PS_imagery,
-        "S2_images":     S2_images,
-        "PS_images":     PS_images,
+
+        "images_path": images_path,
+        "S2_imagery": S2_imagery,
+        "PS_imagery": PS_imagery,
+
+        "results_path": results_path,
+        "figures_path": figures_path,
+
+        "maps_path": maps_path,
+        "maps_png_path": maps_png_path,
+        "maps_tif_path": maps_tif_path,
+
+        "models_path": models_path,
+        "logs_path": logs_path,
+        "metadata_path": metadata_path,
+    }
+
+
+# ----------------------------------------------------------------------
+# Helper functions
+# ----------------------------------------------------------------------
+
+def get_image_lists(paths: dict) -> dict:
+    """
+    Return the imagery currently available on disk.
+
+    Returns
+    -------
+    dict
+
+        {
+            "S2": [...],
+            "PS": [...]
+        }
+    """
+
+    return {
+        "S2": sorted(paths["S2_imagery"].glob("*.tif")),
+        "PS": sorted(paths["PS_imagery"].glob("*.tif")),
+    }
+
+
+def count_images(paths: dict) -> dict:
+    """
+    Count available images.
+
+    Returns
+    -------
+    dict
+        {"S2": n, "PS": n}
+    """
+
+    images = get_image_lists(paths)
+
+    return {
+        key: len(value)
+        for key, value in images.items()
     }

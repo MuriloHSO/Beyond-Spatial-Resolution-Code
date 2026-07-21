@@ -1,8 +1,15 @@
 """
 run.py
+│
+├── parse config.toml
+├── setup_paths()
+├── ensure_imagery()
+├── load_datasets()
+├── run_all_experiments()
+├── generate_figures()
+├── write_metadata(...)
+└── finish()
 ------
-Main entry point for Code Ocean (and local execution without Jupyter).
-
 Configuration is read from config.toml in the same directory as this file.
 Edit that file to change models, experiments, and other settings, then run:
 
@@ -370,6 +377,7 @@ def main(argv=None):
 
     from src.config import build_models
     from src.paths import setup_paths
+    from src.download import ensure_imagery
     from src.data import load_datasets
     from src.experiments import run_all_experiments
     from src.plotting import (
@@ -382,7 +390,7 @@ def main(argv=None):
     )
 
     paths = setup_paths(base=base)
-
+    
     # Override dataset/results paths when running on Code Ocean
     if datasets_dir != base / "data":
         paths["datasets_path"] = datasets_dir
@@ -393,6 +401,9 @@ def main(argv=None):
         (paths["maps_path"] / "PNG").mkdir(parents=True, exist_ok=True)
         (paths["maps_path"] / "TIFF").mkdir(parents=True, exist_ok=True)
 
+    # Ensure imagery is available
+    ensure_imagery(paths)
+
     # -- Step 1: Load datasets ----------------------------------
     print(f"\n[1/{total_steps}] Loading datasets...")
     datasets = load_datasets(paths)
@@ -401,7 +412,12 @@ def main(argv=None):
     # -- Step 2: Run experiments --------------------------------
     print(f"[2/{total_steps}] Running experiments...")
     models  = build_models(cfg["random_state"], cfg["enabled_models"])
-    results = run_all_experiments(cfg["selected_experiments"], models, datasets, paths)
+    results = run_all_experiments(
+    cfg["selected_experiments"],
+    models,
+    datasets,
+    paths,
+    )
     print(f"\n    [OK] All experiments complete.")
     print(f"      Results -> {paths['results_path'] / 'model_results.xlsx'}")
 
