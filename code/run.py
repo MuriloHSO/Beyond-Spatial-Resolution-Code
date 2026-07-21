@@ -247,7 +247,7 @@ def resolve_base_path():
       <repo>/data/    — CSVs and Imagery/ subfolder
       <repo>/results/ — output directory
     """
-    code_ocean_data    = Path("/data")
+    code_ocean_data    = Path("../data")
     code_ocean_results = Path("/results")
 
     if code_ocean_data.exists() and code_ocean_results.exists():
