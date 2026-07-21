@@ -15,9 +15,19 @@ snapshot_download(
 )
 "
 
-# 2. Copy the files inside the downloaded subfolders into the existing data directories
-cp -r /tmp/hf_download/Imagery/PS/. /data/Imagery/PS/
-cp -r /tmp/hf_download/Imagery/S2/. /data/Imagery/S2/
+# 2. Check if folders are uppercase or lowercase in /tmp and copy contents
+if [ -d "/tmp/hf_download/Imagery/PS" ]; then
+    cp -r /tmp/hf_download/Imagery/PS/. /data/Imagery/PS/
+    cp -r /tmp/hf_download/Imagery/S2/. /data/Imagery/S2/
+elif [ -d "/tmp/hf_download/imagery/ps" ]; then
+    cp -r /tmp/hf_download/imagery/ps/. /data/Imagery/PS/
+    cp -r /tmp/hf_download/imagery/s2/. /data/Imagery/S2/
+fi
+
+# 3. Debug line: Print the contents of the target folder to ensure the files are there
+echo "Checking target data directories:"
+ls -la /data/Imagery/PS/
+ls -la /data/Imagery/S2/
 
 echo "Running experiments..."
 python3 run.py "$@"
