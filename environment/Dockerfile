@@ -1,4 +1,4 @@
-# hash:sha256:1db806a29d10737fd9c45b7c00f30bd334b3f781b2841b86087366f14bb68be5
+# hash:sha256:4205f5f69216ae989b1dfdae1ce91c5a2320ac538de188bdebc46ef93d4046fe
 FROM registry.codeocean.com/codeocean/ubuntu:22.04.1
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -22,4 +22,5 @@ RUN pip3 install -U --no-cache-dir \
     openpyxl==3.1.5 \
     pandas==2.3.3 \
     rasterio==1.4.4 \
-    scikit-learn==1.7.2
+    scikit-learn==1.7.2 \
+    tomli

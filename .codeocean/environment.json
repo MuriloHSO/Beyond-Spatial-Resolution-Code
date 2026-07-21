@@ -69,6 +69,9 @@
 				{
 					"name": "scikit-learn",
 					"version": "1.7.2"
+				},
+				{
+					"name": "tomli"
 				}
 			],
 			"options": {},
