@@ -1,0 +1,13 @@
+metadata_version: 1
+name: Beyond Spatial Resolution
+description: |-
+  ## Beyond Spatial Resolution: Comparing Sentinel-2 and PlanetScope Imagery for APS Mapping
+
+  This capsule contains the reference code for the paper ["Beyond Spatial Resolution: Comparing Sentinel-2 and PlanetScope Imagery for APS Mapping"](https://openreview.net/forum?id=KrttzXQWRe) presented at the [4th Machine Learning for Remote Sensing (ML4RS) Workshop](https://ml-for-rs.github.io/iclr2026/) of [ICLR 2026](https://iclr.cc/). The paper investigates the trade-off between the higher spatial and temporal resolutions of PlanetScope (PS) and the computational demands associated with its larger data volume, comparing it with Sentinel-2 (S2) in mapping Agricultural Plastic Structures (APS).
+authors:
+- name: Marlon Fernandes de Souza
+  affiliations:
+  - name: University of São Paulo
+corresponding_contributor:
+  name: Marlon F. de Souza
+  email: marlon.souza@usp.br
