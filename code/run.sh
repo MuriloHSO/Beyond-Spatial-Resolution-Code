@@ -4,13 +4,12 @@ set -ex
 # Beyond Spatial Resolution — Code Ocean entry point
 echo "Downloading imagery from Hugging Face..."
 
-# Download only the Imagery folder from the dataset repository
-hf download MuriloHSO/Beyond-Spatial-Resolution-Code \
-    --repo-type dataset \
+# 1. Download only the Imagery folder from the dataset repository using the 'hf' tool
+hf dataset download MuriloHSO/Beyond-Spatial-Resolution-Code \
     --include "Imagery/*" \
     --local-dir /tmp/hf_download
 
-# Move the downloaded subfolders directly into /data/Imagery/
+# 2. Move the downloaded subfolder contents into their matching data folders
 mv /tmp/hf_download/Imagery/PS/* /data/Imagery/PS/
 mv /tmp/hf_download/Imagery/S2/* /data/Imagery/S2/
 
