@@ -15,10 +15,9 @@ snapshot_download(
 )
 "
 
-# 2. Safely clear out the placeholder folders and move the downloaded data into place
-rm -rf /data/Imagery/PS /data/Imagery/S2
-mv /tmp/hf_download/Imagery/PS /data/Imagery/PS
-mv /tmp/hf_download/Imagery/S2 /data/Imagery/S2
+# 2. Copy the files inside the downloaded subfolders into the existing data directories
+cp -r /tmp/hf_download/Imagery/PS/. /data/Imagery/PS/
+cp -r /tmp/hf_download/Imagery/S2/. /data/Imagery/S2/
 
 echo "Running experiments..."
 python3 run.py "$@"
