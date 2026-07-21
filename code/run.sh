@@ -5,7 +5,7 @@ set -ex
 echo "Downloading imagery from Hugging Face..."
 
 # 1. Download only the Imagery folder from the dataset repository using the 'hf' tool
-hf dataset download MuriloHSO/Beyond-Spatial-Resolution-Code \
+hf datasets download MuriloHSO/Beyond-Spatial-Resolution-Code \
     --include "Imagery/*" \
     --local-dir /tmp/hf_download
 
