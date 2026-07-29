@@ -71,7 +71,8 @@
 					"version": "1.7.2"
 				},
 				{
-					"name": "tomli"
+					"name": "tomli",
+					"version": "2.4.1"
 				}
 			],
 			"options": {},

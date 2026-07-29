@@ -401,8 +401,11 @@ def main(argv=None):
         (paths["maps_path"] / "PNG").mkdir(parents=True, exist_ok=True)
         (paths["maps_path"] / "TIFF").mkdir(parents=True, exist_ok=True)
 
-    # Ensure imagery is available
-    ensure_imagery(paths)
+    # Ensure imagery is available only if any experiment requires image classification
+    if any_img:
+        ensure_imagery(paths)
+    else:
+        print("✓ Full-image classification disabled. Skipping imagery download.")
 
     # -- Step 1: Load datasets ----------------------------------
     print(f"\n[1/{total_steps}] Loading datasets...")
