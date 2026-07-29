@@ -4,28 +4,28 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 
 ## Repository Structure
 
-`run.py` — Main entry point. Edit the `DEFAULT_*` constants at the top, or pass command-line arguments (see `--help`).
-
-`run.sh` — Bash entry point required by Code Ocean. Calls `run.py` and forwards any CLI arguments.
-
-`src/` - Python package containing all library code:
-- `config.py` — builds the classifiers dictionary
-- `paths.py` — filesystem paths and output directory creation
-- `data.py` — CSV dataset loading
-- `training.py` — `train_and_evaluate_model` function
-- `experiments.py` — per-experiment runners and dispatcher
-- `plotting.py` — all figure-generation functions
+`code/`
+- `config.toml` — Sets which code to run: full or quick. It also allows for the selection of models and band configurations.
+- `run.py` — Main entry point. Edit the `DEFAULT_*` constants at the top, or pass command-line arguments (see `--help`).
+- `run.sh` — Bash entry point required by Code Ocean. Calls `run.py` and forwards any CLI arguments.
+- `requirements.txt` - lists the required Python packages to run the code.
+- `src/` - Python package containing all library code:
+    - `config.py` — builds the classifiers dictionary
+    - `paths.py` — filesystem paths and output directory creation
+    - `data.py` — CSV dataset loading
+    - `download.py` — download image dataset from Hugging Face
+    - `training.py` — `train_and_evaluate_model` function
+    - `experiments.py` — per-experiment runners and dispatcher
+    - `plotting.py` — all figure-generation functions
 
 `data/` - input data directory (mirrors Code Ocean's `/data`):
-- CSV training and validation datasets (committed to the repository)
-- `Imagery/` — must contain the GeoTIFF imagery downloaded from [Hugging Face](https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code) (not committed)
+- CSV training and validation datasets (included in the repository)
+- `Imagery/` — must contain the GeoTIFF imagery downloaded from [Hugging Face](https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code) (not includeded)
 
 `results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
 - Classification maps (PNG and TIFF), metric tables, and figures
 
 `scratch/` - temporary working directory for large intermediate files.
-
-`requirements.txt` - lists the required Python packages to run the code.
 
 ## Quick Start
 1. Clone this repository: 
@@ -53,3 +53,6 @@ All user-facing settings live in [`config.toml`](config.toml):
 
 Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGD`, `SVM_linear`, `SVM_rbf`  
 Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`
+
+## Declaration of AI-assisted coding
+We refactored the original notebook (.ipynb) code used for the paper into a version that meets Code Ocean's reproducibility requirements, using the free versions of Gemini 2.0 (July 2026) and GitHub Copilot (June 2026).
