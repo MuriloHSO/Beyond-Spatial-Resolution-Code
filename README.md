@@ -32,9 +32,8 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 ```bash
 git clone https://github.com/MuriloHSO/Beyond-Spatial-Resolution-Code.git
 ```
-2. Download GeoTIFF imagery from [Hugging Face](https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code) and place in `data/Imagery/`.
-3. Open [`config.toml`](config.toml) and choose your models, experiments and settings.
-4. Run:
+2. Open [`config.toml`](config.toml) and choose your models, experiments and settings.
+3. Run:
 ```bash
 python run.py
 ```
