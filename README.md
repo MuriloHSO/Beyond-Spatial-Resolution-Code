@@ -48,7 +48,7 @@ All user-facing settings live in [`config.toml`](config.toml):
 | `apply_model_on_image` | `true` to classify the full satellite image in every experiment; `false` to skip (faster) |
 | `experiments` | List of experiment names to run |
 
-Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGD`, `SVM_linear`, `SVM_rbf`  
+Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGDC`, `LinearSVC`, `SVM_rbf`  
 Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`
 
 ## Declaration of AI-assisted coding
