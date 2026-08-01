@@ -52,6 +52,6 @@ Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGDC`, `LinearSVC`, `SVM_rbf`
 Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`
 
 ## Declaration of AI-assisted coding
-We refactored the original notebook (.ipynb) code used for the paper into a version that meets Code Ocean's reproducibility requirements, using the free versions of Gemini 2.0 (July 2026) and GitHub Copilot (June 2026).
+We refactored the original notebook (.ipynb) code initially used for the paper into a version that meets Code Ocean's reproducibility requirements, using the free versions of Gemini 2.0 and GitHub Copilot (from June/July 2026).
 
 
