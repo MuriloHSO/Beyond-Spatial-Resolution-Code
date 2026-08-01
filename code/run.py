@@ -25,7 +25,7 @@ Options
                                 (default: config.toml next to this script)
     --random-state INT          Random seed for classifiers
     --models MODEL [MODEL ...]  Models to run; omit to use config.toml value.
-                                Valid: CART KNN MLP RF SGD SVM_linear SVM_rbf
+                                Valid: CART KNN MLP RF SGDC LinearSVC SVM_rbf
     --experiments EXP [EXP ...] Experiments to run; omit to use config.toml.
                                 Valid: S2_4b S2_Allb PS_4b PS_Allb
     --apply-on-image            Force full-image classification for every
@@ -114,7 +114,7 @@ def load_toml_config(path: Path) -> dict:
 # Valid values
 # ---------------------------------------------------------------------------
 
-ALL_MODELS = ["CART", "KNN", "MLP", "RF", "SGD", "SVM_linear", "SVM_rbf"]
+ALL_MODELS = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVM_rbf"]
 ALL_EXPERIMENTS = ["S2_4b", "S2_Allb", "PS_4b", "PS_Allb"]
 
 # Fallback defaults (used when config.toml is missing and no CLI flag is given)

@@ -25,8 +25,8 @@ def build_models(random_state: int = 2025, enabled: list = None) -> dict:
         Seed used for all classifiers that accept ``random_state``.
     enabled : list of str, optional
         Names of models to include.  If *None* (default) all seven models are
-        returned.  Valid names: 'CART', 'KNN', 'MLP', 'RF', 'SGD',
-        'SVM_linear', 'SVM_rbf'.
+        returned.  Valid names: 'CART', 'KNN', 'MLP', 'RF', 'SGDC',
+        'LinearSVC', 'SVM_rbf'.
 
     Returns
     -------
@@ -37,8 +37,8 @@ def build_models(random_state: int = 2025, enabled: list = None) -> dict:
         "KNN": KNeighborsClassifier(),
         "MLP": MLPClassifier(random_state=random_state),
         "RF": RandomForestClassifier(random_state=random_state),
-        "SGD": SGDClassifier(random_state=random_state),
-        "SVM_linear": LinearSVC(random_state=random_state),
+        "SGDC": SGDClassifier(random_state=random_state),
+        "LinearSVC": LinearSVC(random_state=random_state),
         "SVM_rbf": SVC(random_state=random_state),
     }
 
