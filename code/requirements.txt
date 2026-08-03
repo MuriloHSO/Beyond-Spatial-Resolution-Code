@@ -4,3 +4,5 @@ pandas
 rasterio
 scikit-learn
 openpyxl
+huggingface_hub
+tomli

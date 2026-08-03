@@ -1,0 +1,62 @@
+
+============================================================
+  Beyond Spatial Resolution
+  Agricultural Plastic Structures Mapping
+============================================================
+
+Initializing...
+
+  Random state  : 2025
+  Models        : CART, KNN, SGDC, LinearSVC  (4 total)
+  Experiments   : S2_4b, S2_Allb, PS_4b, PS_Allb
+  Image classif.: disabled
+  Figures       : enabled
+
+Planned steps:
+  [1] Load datasets
+  [2] Run experiments  (4 exp × 4 model(s))
+  [3] Generate figures
+
+------------------------------------------------------------
+✓ Full-image classification disabled. Skipping imagery download.
+
+[1/3] Loading datasets...
+    [OK] Datasets loaded.
+
+[2/3] Running experiments...
+
+  + [1/4] S2_4b
+  +- [1/4] CART          train 0.773s  valid 0.001s  classif -  [OK]
+  +- [2/4] KNN           train 0.060s  valid 0.803s  classif -  [OK]
+  +- [3/4] SGDC          train 0.081s  valid 0.001s  classif -  [OK]
+  \- [4/4] LinearSVC     train 0.140s  valid 0.001s  classif -  [OK]
+
+  + [2/4] S2_Allb
+  +- [1/4] CART          train 2.109s  valid 0.001s  classif -  [OK]
+  +- [2/4] KNN           train 0.007s  valid 0.737s  classif -  [OK]
+  +- [3/4] SGDC          train 0.139s  valid 0.002s  classif -  [OK]
+  \- [4/4] LinearSVC     train 0.341s  valid 0.001s  classif -  [OK]
+
+  + [3/4] PS_4b
+  +- [1/4] CART          train 0.470s  valid 0.001s  classif -  [OK]
+  +- [2/4] KNN           train 0.060s  valid 0.867s  classif -  [OK]
+  +- [3/4] SGDC          train 0.082s  valid 0.001s  classif -  [OK]
+  \- [4/4] LinearSVC     train 0.156s  valid 0.001s  classif -  [OK]
+
+  + [4/4] PS_Allb
+  +- [1/4] CART          train 0.978s  valid 0.001s  classif -  [OK]
+  +- [2/4] KNN           train 0.004s  valid 0.750s  classif -  [OK]
+  +- [3/4] SGDC          train 0.115s  valid 0.001s  classif -  [OK]
+  \- [4/4] LinearSVC     train 0.330s  valid 0.001s  classif -  [OK]
+
+    [OK] All experiments complete.
+      Results -> /results/model_results.xlsx
+
+[3/3] Generating figures...
+    [OK] Figures saved: Figure1, OA/Kappa bars, Satellite impact, Band impact, Scatter combined
+
+============================================================
+  [Success]  All done!  ->  /results
+============================================================
+
+  [Success]  |  Log saved -> /results/run.log
