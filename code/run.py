@@ -1,8 +1,15 @@
 """
 run.py
+│
+├── parse config.toml
+├── setup_paths()
+├── ensure_imagery()
+├── load_datasets()
+├── run_all_experiments()
+├── generate_figures()
+├── write_metadata(...)
+└── finish()
 ------
-Main entry point for Code Ocean (and local execution without Jupyter).
-
 Configuration is read from config.toml in the same directory as this file.
 Edit that file to change models, experiments, and other settings, then run:
 
@@ -18,7 +25,7 @@ Options
                                 (default: config.toml next to this script)
     --random-state INT          Random seed for classifiers
     --models MODEL [MODEL ...]  Models to run; omit to use config.toml value.
-                                Valid: CART KNN MLP RF SGD SVM_linear SVM_rbf
+                                Valid: CART KNN MLP RF SGDC LinearSVC SVM_rbf
     --experiments EXP [EXP ...] Experiments to run; omit to use config.toml.
                                 Valid: S2_4b S2_Allb PS_4b PS_Allb
     --apply-on-image            Force full-image classification for every
@@ -107,7 +114,7 @@ def load_toml_config(path: Path) -> dict:
 # Valid values
 # ---------------------------------------------------------------------------
 
-ALL_MODELS = ["CART", "KNN", "MLP", "RF", "SGD", "SVM_linear", "SVM_rbf"]
+ALL_MODELS = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVM_rbf"]
 ALL_EXPERIMENTS = ["S2_4b", "S2_Allb", "PS_4b", "PS_Allb"]
 
 # Fallback defaults (used when config.toml is missing and no CLI flag is given)
@@ -247,7 +254,7 @@ def resolve_base_path():
       <repo>/data/    — CSVs and Imagery/ subfolder
       <repo>/results/ — output directory
     """
-    code_ocean_data    = Path("/data")
+    code_ocean_data    = Path("../data")
     code_ocean_results = Path("/results")
 
     if code_ocean_data.exists() and code_ocean_results.exists():
@@ -370,6 +377,7 @@ def main(argv=None):
 
     from src.config import build_models
     from src.paths import setup_paths
+    from src.download import ensure_imagery
     from src.data import load_datasets
     from src.experiments import run_all_experiments
     from src.plotting import (
@@ -382,7 +390,7 @@ def main(argv=None):
     )
 
     paths = setup_paths(base=base)
-
+    
     # Override dataset/results paths when running on Code Ocean
     if datasets_dir != base / "data":
         paths["datasets_path"] = datasets_dir
@@ -393,6 +401,12 @@ def main(argv=None):
         (paths["maps_path"] / "PNG").mkdir(parents=True, exist_ok=True)
         (paths["maps_path"] / "TIFF").mkdir(parents=True, exist_ok=True)
 
+    # Ensure imagery is available only if any experiment requires image classification
+    if any_img:
+        ensure_imagery(paths)
+    else:
+        print("✓ Full-image classification disabled. Skipping imagery download.")
+
     # -- Step 1: Load datasets ----------------------------------
     print(f"\n[1/{total_steps}] Loading datasets...")
     datasets = load_datasets(paths)
@@ -401,7 +415,12 @@ def main(argv=None):
     # -- Step 2: Run experiments --------------------------------
     print(f"[2/{total_steps}] Running experiments...")
     models  = build_models(cfg["random_state"], cfg["enabled_models"])
-    results = run_all_experiments(cfg["selected_experiments"], models, datasets, paths)
+    results = run_all_experiments(
+    cfg["selected_experiments"],
+    models,
+    datasets,
+    paths,
+    )
     print(f"\n    [OK] All experiments complete.")
     print(f"      Results -> {paths['results_path'] / 'model_results.xlsx'}")
 
@@ -459,7 +478,8 @@ if __name__ == "__main__":
         else _base_dir / "results"
     )
     _results_dir.mkdir(parents=True, exist_ok=True)
-    _log_path = _base_dir / "run.log"
+    _log_path = Path("/results/run.log")
+    
 
     _log_file = open(_log_path, "w", encoding="utf-8", buffering=1)
     _header = (

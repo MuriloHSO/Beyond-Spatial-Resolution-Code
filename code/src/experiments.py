@@ -5,8 +5,8 @@ Experiment definitions and the dispatcher that runs them.
 """
 
 import pandas as pd
-
 from .training import train_and_evaluate_model
+from .paths import get_image_lists
 
 
 # ---------------------------------------------------------------------------
@@ -37,6 +37,9 @@ PS_BANDS_ALL = [
     "B1_2", "B2_2", "B3_2", "B4_2", "B5_2", "B6_2", "B7_2", "B8_2",
 ]
 
+def _get_imagery(paths, sensor):
+    images = get_image_lists(paths)
+    return images[sensor][0] if images[sensor] else None
 
 # ---------------------------------------------------------------------------
 # Individual experiment runners
@@ -46,7 +49,7 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
     X,  y  = datasets["df_s2train"][S2_BANDS_4], datasets["df_s2train"]["Class"]
     X2, y2 = datasets["df_s2val"][S2_BANDS_4],   datasets["df_s2val"]["Class"]
 
-    imagery = paths["S2_images"][0] if paths["S2_images"] else None
+    imagery = _get_imagery(paths, "S2")
     params, results = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
@@ -63,7 +66,7 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
     X,  y  = datasets["df_s2train"][S2_BANDS_ALL], datasets["df_s2train"]["Class"]
     X2, y2 = datasets["df_s2val"][S2_BANDS_ALL],   datasets["df_s2val"]["Class"]
 
-    imagery = paths["S2_images"][0] if paths["S2_images"] else None
+    imagery = _get_imagery(paths, "S2")
     params, results = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
@@ -80,7 +83,7 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
     X,  y  = datasets["df_psstrain"][PS_BANDS_4], datasets["df_psstrain"]["Class"]
     X2, y2 = datasets["df_pssval"][PS_BANDS_4],   datasets["df_pssval"]["Class"]
 
-    imagery = paths["PS_images"][0] if paths["PS_images"] else None
+    imagery = _get_imagery(paths, "PS")
     params, results = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
@@ -97,7 +100,7 @@ def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, s
     X,  y  = datasets["df_psstrain"][PS_BANDS_ALL], datasets["df_psstrain"]["Class"]
     X2, y2 = datasets["df_pssval"][PS_BANDS_ALL],   datasets["df_pssval"]["Class"]
 
-    imagery = paths["PS_images"][0] if paths["PS_images"] else None
+    imagery = _get_imagery(paths, "PS")
     params, results = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
