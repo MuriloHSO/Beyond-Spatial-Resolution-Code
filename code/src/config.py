@@ -26,7 +26,7 @@ def build_models(random_state: int = 2025, enabled: list = None) -> dict:
     enabled : list of str, optional
         Names of models to include.  If *None* (default) all seven models are
         returned.  Valid names: 'CART', 'KNN', 'MLP', 'RF', 'SGDC',
-        'LinearSVC', 'SVM_rbf'.
+        'LinearSVC', 'SVC_rbf'.
 
     Returns
     -------
@@ -39,7 +39,7 @@ def build_models(random_state: int = 2025, enabled: list = None) -> dict:
         "RF": RandomForestClassifier(random_state=random_state),
         "SGDC": SGDClassifier(random_state=random_state),
         "LinearSVC": LinearSVC(random_state=random_state),
-        "SVM_rbf": SVC(random_state=random_state),
+        "SVC_rbf": SVC(random_state=random_state),
     }
 
     if enabled is None:
