@@ -362,7 +362,7 @@ def plot_scatter_from_mode(
     bands=True,
 ):
     """
-    Scatter plot of OA vs Classification Time.
+    Scatter plot of OA vs Inference Speed.
 
     Parameters
     ----------
@@ -516,7 +516,7 @@ def plot_scatter_from_mode(
     plt.grid(True, which="major", linestyle="--", linewidth=0.5, alpha=0.7)
     plt.xscale("log")
     if show_xlabel:
-        plt.xlabel("Classification Time (s)")
+        plt.xlabel("Inference Speed (s)")
     plt.ylabel("Overall Accuracy (OA)")
     plt.tight_layout()
     plt.savefig(results_path / output_name, dpi=save_dpi)
@@ -754,10 +754,10 @@ def plot_satellite_impact(results_file, results_path):
     ax.bar(x - width / 2, sat_diff_df["Dif tt (%)"], width, yerr=sat_diff_df["tt_std_pct"].fillna(0.0),
            label="TT: PS mean vs S2 mean (avg std)", color="skyblue", capsize=5, linewidth=0)
     ax.bar(x + width / 2, sat_diff_df["Dif ct (%)"], width, yerr=sat_diff_df["ct_std_pct"].fillna(0.0),
-           label="ICT: PS mean vs S2 mean (avg std)", color="salmon", capsize=5, linewidth=0)
+           label="IS: PS mean vs S2 mean (avg std)", color="salmon", capsize=5, linewidth=0)
 
     ax.axhline(tt_mean_sat, color="blue",  linestyle="--", linewidth=1.5, label=f"Average TT ({tt_mean_sat:.1f}%)")
-    ax.axhline(ct_mean_sat, color="red",   linestyle="--", linewidth=1.5, label=f"Average ICT ({ct_mean_sat:.1f}%)")
+    ax.axhline(ct_mean_sat, color="red",   linestyle="--", linewidth=1.5, label=f"Average IS ({ct_mean_sat:.1f}%)")
 
     ax.set_xlabel("Models")
     ax.set_xticks(x)
@@ -817,7 +817,7 @@ def plot_band_impact(results_file, results_path):
             })
 
     if not rows_band:
-        raise ValueError("Could not compute TT/ICT differences by band count for S2 and PS.")
+        raise ValueError("Could not compute TT/IS differences by band count for S2 and PS.")
 
     diff_df_bands = pd.DataFrame(rows_band)
     model_order = order_models(diff_df_bands["Model"].unique())
@@ -843,10 +843,10 @@ def plot_band_impact(results_file, results_path):
     ax.bar(x - width / 2, imgdf_bands["tt_mean"], width, yerr=imgdf_bands["tt"],
            label="TT mean and standard deviation", color="skyblue", capsize=5, linewidth=0)
     ax.bar(x + width / 2, imgdf_bands["ct_mean"], width, yerr=imgdf_bands["ct"],
-           label="ICT mean and standard deviation", color="salmon", capsize=5, linewidth=0)
+           label="IS mean and standard deviation", color="salmon", capsize=5, linewidth=0)
 
     ax.axhline(average_tt, color="blue", linestyle="--", linewidth=1.5, label=f"Average TT ({average_tt:.1f}%)")
-    ax.axhline(average_ct, color="red",  linestyle="--", linewidth=1.5, label=f"Average ICT ({average_ct:.1f}%)")
+    ax.axhline(average_ct, color="red",  linestyle="--", linewidth=1.5, label=f"Average IS ({average_ct:.1f}%)")
 
     ax.set_xlabel("Models")
     ax.set_xticks(x)

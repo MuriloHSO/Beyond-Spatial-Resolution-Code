@@ -11,16 +11,16 @@ random_state = 2025
 # -----------------------------------------------------------------------------
 # Models to run.
 # Comment out or remove names to disable specific models.
-# Valid options: "CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVM_rbf"
+# Valid options: "CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVC_rbf"
 # To run ALL models, leave the list empty: models = []
 models = [
     "CART",
     "KNN",
-    #"MLP",
-    #"RF",
+    "MLP",
+    "RF",
     "SGDC",
     "LinearSVC",
-    #"SVM_rbf",
+    "SVC_rbf",
 ]
 # -----------------------------------------------------------------------------
 # Whether to generate figures after the experiments.

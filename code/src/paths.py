@@ -35,7 +35,7 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
     data_path = base / "data"
 
-    datasets_path = data_path / "Datasets"
+    datasets_path = data_path
 
     images_path = data_path / "Imagery"
 
@@ -49,9 +49,9 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
     results_path = base / "results"
 
-    figures_path = results_path / "Figures"
+    figures_path = results_path / "figures"
 
-    maps_path = results_path / "Maps"
+    maps_path = results_path / "maps"
 
     maps_png_path = maps_path / "PNG"
 

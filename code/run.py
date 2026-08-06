@@ -25,7 +25,7 @@ Options
                                 (default: config.toml next to this script)
     --random-state INT          Random seed for classifiers
     --models MODEL [MODEL ...]  Models to run; omit to use config.toml value.
-                                Valid: CART KNN MLP RF SGDC LinearSVC SVM_rbf
+                                Valid: CART KNN MLP RF SGDC LinearSVC SVC_rbf
     --experiments EXP [EXP ...] Experiments to run; omit to use config.toml.
                                 Valid: S2_4b S2_Allb PS_4b PS_Allb
     --apply-on-image            Force full-image classification for every
@@ -114,7 +114,7 @@ def load_toml_config(path: Path) -> dict:
 # Valid values
 # ---------------------------------------------------------------------------
 
-ALL_MODELS = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVM_rbf"]
+ALL_MODELS = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVC_rbf"]
 ALL_EXPERIMENTS = ["S2_4b", "S2_Allb", "PS_4b", "PS_Allb"]
 
 # Fallback defaults (used when config.toml is missing and no CLI flag is given)
@@ -261,9 +261,9 @@ def resolve_base_path():
         # Running inside Code Ocean
         return Path("/code"), code_ocean_data, code_ocean_results
 
-    # Local execution: mirror Code Ocean conventions relative to this file's parent
+    # Local execution: mirror Code Ocean conventions relative to this file's parent.
     base = Path(__file__).resolve().parent
-    return base, base / "data", base / "results"
+    return base.parent, base.parent / "data", base.parent / "results"
 
 
 # ---------------------------------------------------------------------------
@@ -405,7 +405,7 @@ def main(argv=None):
     if any_img:
         ensure_imagery(paths)
     else:
-        print("✓ Full-image classification disabled. Skipping imagery download.")
+        print("[OK] Full-image classification disabled. Skipping imagery download.")
 
     # -- Step 1: Load datasets ----------------------------------
     print(f"\n[1/{total_steps}] Loading datasets...")
@@ -470,16 +470,11 @@ if __name__ == "__main__":
     import datetime
     import traceback as _tb
 
-    # Resolve results directory early (same logic as resolve_base_path)
-    _base_dir = Path(__file__).resolve().parent
-    _results_dir = (
-        Path("/results")
-        if Path("/data").exists() and Path("/results").exists()
-        else _base_dir / "results"
-    )
+    # Resolve the repository data/results layout early so logs and outputs
+    # remain in sibling directories outside the code folder.
+    _base_dir, _datasets_dir, _results_dir = resolve_base_path()
     _results_dir.mkdir(parents=True, exist_ok=True)
-    _log_path = Path("/results/run.log")
-    
+    _log_path = _results_dir / "run.log"
 
     _log_file = open(_log_path, "w", encoding="utf-8", buffering=1)
     _header = (
