@@ -33,7 +33,7 @@ def ensure_imagery(paths: dict, force_download: bool = False) -> None:
         and len(images["S2"]) > 0
         and len(images["PS"]) > 0
     ):
-        print("✓ Imagery already available.")
+        print("[OK] Imagery already available.")
         print(f"  Sentinel-2 : {len(images['S2'])} images")
         print(f"  PlanetScope: {len(images['PS'])} images")
         return
