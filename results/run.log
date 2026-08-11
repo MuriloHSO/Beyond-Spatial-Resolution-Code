@@ -1,5 +1,5 @@
 Beyond Spatial Resolution - Run log
-Started : 2026-08-06 14:47:58
+Started : 2026-08-10 18:28:32
 ------------------------------------------------------------
 
 ============================================================
@@ -30,39 +30,39 @@ Planned steps:
 
   + [1/4] S2_4b
   +- [1/7] CART          train 0.365s  valid 0.001s  classif -  [OK]
-  +- [2/7] KNN           train 0.049s  valid 0.178s  classif -  [OK]
-  +- [3/7] MLP           train 9.731s  valid 0.005s  classif -  [OK]
-  +- [4/7] RF            train 5.622s  valid 0.051s  classif -  [OK]
-  +- [5/7] SGDC          train 0.053s  valid 0.000s  classif -  [OK]
-  +- [6/7] LinearSVC     train 0.081s  valid 0.000s  classif -  [OK]
-  \- [7/7] SVC_rbf       train 1.276s  valid 1.194s  classif -  [OK]
+  +- [2/7] KNN           train 0.058s  valid 0.202s  classif -  [OK]
+  +- [3/7] MLP           train 10.270s  valid 0.006s  classif -  [OK]
+  +- [4/7] RF            train 5.737s  valid 0.054s  classif -  [OK]
+  +- [5/7] SGDC          train 0.056s  valid 0.001s  classif -  [OK]
+  +- [6/7] LinearSVC     train 0.069s  valid 0.001s  classif -  [OK]
+  \- [7/7] SVC_rbf       train 1.306s  valid 1.213s  classif -  [OK]
 
   + [2/4] S2_Allb
-  +- [1/7] CART          train 1.021s  valid 0.001s  classif -  [OK]
-  +- [2/7] KNN           train 0.005s  valid 1.161s  classif -  [OK]
-  +- [3/7] MLP           train 10.809s  valid 0.005s  classif -  [OK]
-  +- [4/7] RF            train 9.536s  valid 0.050s  classif -  [OK]
-  +- [5/7] SGDC          train 0.094s  valid 0.001s  classif -  [OK]
-  +- [6/7] LinearSVC     train 0.160s  valid 0.001s  classif -  [OK]
-  \- [7/7] SVC_rbf       train 1.193s  valid 1.146s  classif -  [OK]
+  +- [1/7] CART          train 1.051s  valid 0.001s  classif -  [OK]
+  +- [2/7] KNN           train 0.009s  valid 0.922s  classif -  [OK]
+  +- [3/7] MLP           train 12.076s  valid 0.005s  classif -  [OK]
+  +- [4/7] RF            train 9.625s  valid 0.052s  classif -  [OK]
+  +- [5/7] SGDC          train 0.107s  valid 0.002s  classif -  [OK]
+  +- [6/7] LinearSVC     train 0.177s  valid 0.001s  classif -  [OK]
+  \- [7/7] SVC_rbf       train 1.183s  valid 1.149s  classif -  [OK]
 
   + [3/4] PS_4b
-  +- [1/7] CART          train 0.274s  valid 0.001s  classif -  [OK]
-  +- [2/7] KNN           train 0.048s  valid 0.219s  classif -  [OK]
-  +- [3/7] MLP           train 12.427s  valid 0.014s  classif -  [OK]
-  +- [4/7] RF            train 11.701s  valid 0.204s  classif -  [OK]
-  +- [5/7] SGDC          train 0.231s  valid 0.001s  classif -  [OK]
-  +- [6/7] LinearSVC     train 0.283s  valid 0.001s  classif -  [OK]
-  \- [7/7] SVC_rbf       train 5.051s  valid 4.791s  classif -  [OK]
+  +- [1/7] CART          train 0.277s  valid 0.001s  classif -  [OK]
+  +- [2/7] KNN           train 0.048s  valid 0.228s  classif -  [OK]
+  +- [3/7] MLP           train 8.828s  valid 0.005s  classif -  [OK]
+  +- [4/7] RF            train 4.673s  valid 0.055s  classif -  [OK]
+  +- [5/7] SGDC          train 0.070s  valid 0.001s  classif -  [OK]
+  +- [6/7] LinearSVC     train 0.081s  valid 0.001s  classif -  [OK]
+  \- [7/7] SVC_rbf       train 1.317s  valid 1.265s  classif -  [OK]
 
   + [4/4] PS_Allb
-  +- [1/7] CART          train 1.350s  valid 0.003s  classif -  [OK]
-  +- [2/7] KNN           train 0.056s  valid 1.365s  classif -  [OK]
-  +- [3/7] MLP           train 12.875s  valid 0.005s  classif -  [OK]
-  +- [4/7] RF            train 6.032s  valid 0.057s  classif -  [OK]
-  +- [5/7] SGDC          train 0.088s  valid 0.001s  classif -  [OK]
-  +- [6/7] LinearSVC     train 0.159s  valid 0.001s  classif -  [OK]
-  \- [7/7] SVC_rbf       train 1.487s  valid 1.585s  classif -  [OK]
+  +- [1/7] CART          train 0.569s  valid 0.001s  classif -  [OK]
+  +- [2/7] KNN           train 0.006s  valid 0.252s  classif -  [OK]
+  +- [3/7] MLP           train 12.794s  valid 0.005s  classif -  [OK]
+  +- [4/7] RF            train 5.990s  valid 0.055s  classif -  [OK]
+  +- [5/7] SGDC          train 0.093s  valid 0.001s  classif -  [OK]
+  +- [6/7] LinearSVC     train 0.150s  valid 0.001s  classif -  [OK]
+  \- [7/7] SVC_rbf       train 1.427s  valid 1.555s  classif -  [OK]
 
     [OK] All experiments complete.
       Results -> C:\Users\USP\vscode\capsule-7671752\results\model_results.xlsx
@@ -75,4 +75,4 @@ Planned steps:
 ============================================================
 
 ------------------------------------------------------------
-Ended : 2026-08-06 15:00:10
+Ended : 2026-08-10 18:37:37

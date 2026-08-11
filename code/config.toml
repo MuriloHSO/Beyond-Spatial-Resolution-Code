@@ -16,11 +16,11 @@ random_state = 2025
 models = [
     "CART",
     "KNN",
-    "MLP",
-    "RF",
+    #"MLP",
+    #"RF",
     "SGDC",
     "LinearSVC",
-    "SVC_rbf",
+    #"SVC_rbf",
 ]
 # -----------------------------------------------------------------------------
 # Whether to generate figures after the experiments.
