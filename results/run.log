@@ -1,5 +1,5 @@
 Beyond Spatial Resolution - Run log
-Started : 2026-08-10 18:28:32
+Started : 2026-08-11 12:36:06
 ------------------------------------------------------------
 
 ============================================================
@@ -10,14 +10,14 @@ Started : 2026-08-10 18:28:32
 Initializing...
 
   Random state  : 2025
-  Models        : CART, KNN, MLP, RF, SGDC, LinearSVC, SVC_rbf  (7 total)
+  Models        : CART, KNN, SGDC, LinearSVC  (4 total)
   Experiments   : S2_4b, S2_Allb, PS_4b, PS_Allb
   Image classif.: disabled
   Figures       : enabled
 
 Planned steps:
   [1] Load datasets
-  [2] Run experiments  (4 exp × 7 model(s))
+  [2] Run experiments  (4 exp × 4 model(s))
   [3] Generate figures
 
 ------------------------------------------------------------
@@ -29,50 +29,38 @@ Planned steps:
 [2/3] Running experiments...
 
   + [1/4] S2_4b
-  +- [1/7] CART          train 0.365s  valid 0.001s  classif -  [OK]
-  +- [2/7] KNN           train 0.058s  valid 0.202s  classif -  [OK]
-  +- [3/7] MLP           train 10.270s  valid 0.006s  classif -  [OK]
-  +- [4/7] RF            train 5.737s  valid 0.054s  classif -  [OK]
-  +- [5/7] SGDC          train 0.056s  valid 0.001s  classif -  [OK]
-  +- [6/7] LinearSVC     train 0.069s  valid 0.001s  classif -  [OK]
-  \- [7/7] SVC_rbf       train 1.306s  valid 1.213s  classif -  [OK]
+  +- [1/4] CART          train 0.373s  valid 0.001s  classif -  [OK]
+  +- [2/4] KNN           train 0.048s  valid 0.190s  classif -  [OK]
+  +- [3/4] SGDC          train 0.054s  valid 0.000s  classif -  [OK]
+  \- [4/4] LinearSVC     train 0.073s  valid 0.001s  classif -  [OK]
 
   + [2/4] S2_Allb
-  +- [1/7] CART          train 1.051s  valid 0.001s  classif -  [OK]
-  +- [2/7] KNN           train 0.009s  valid 0.922s  classif -  [OK]
-  +- [3/7] MLP           train 12.076s  valid 0.005s  classif -  [OK]
-  +- [4/7] RF            train 9.625s  valid 0.052s  classif -  [OK]
-  +- [5/7] SGDC          train 0.107s  valid 0.002s  classif -  [OK]
-  +- [6/7] LinearSVC     train 0.177s  valid 0.001s  classif -  [OK]
-  \- [7/7] SVC_rbf       train 1.183s  valid 1.149s  classif -  [OK]
+  +- [1/4] CART          train 1.017s  valid 0.001s  classif -  [OK]
+  +- [2/4] KNN           train 0.005s  valid 0.878s  classif -  [OK]
+  +- [3/4] SGDC          train 0.104s  valid 0.001s  classif -  [OK]
+  \- [4/4] LinearSVC     train 0.159s  valid 0.001s  classif -  [OK]
 
   + [3/4] PS_4b
-  +- [1/7] CART          train 0.277s  valid 0.001s  classif -  [OK]
-  +- [2/7] KNN           train 0.048s  valid 0.228s  classif -  [OK]
-  +- [3/7] MLP           train 8.828s  valid 0.005s  classif -  [OK]
-  +- [4/7] RF            train 4.673s  valid 0.055s  classif -  [OK]
-  +- [5/7] SGDC          train 0.070s  valid 0.001s  classif -  [OK]
-  +- [6/7] LinearSVC     train 0.081s  valid 0.001s  classif -  [OK]
-  \- [7/7] SVC_rbf       train 1.317s  valid 1.265s  classif -  [OK]
+  +- [1/4] CART          train 0.280s  valid 0.001s  classif -  [OK]
+  +- [2/4] KNN           train 0.051s  valid 0.223s  classif -  [OK]
+  +- [3/4] SGDC          train 0.059s  valid 0.001s  classif -  [OK]
+  \- [4/4] LinearSVC     train 0.084s  valid 0.001s  classif -  [OK]
 
   + [4/4] PS_Allb
-  +- [1/7] CART          train 0.569s  valid 0.001s  classif -  [OK]
-  +- [2/7] KNN           train 0.006s  valid 0.252s  classif -  [OK]
-  +- [3/7] MLP           train 12.794s  valid 0.005s  classif -  [OK]
-  +- [4/7] RF            train 5.990s  valid 0.055s  classif -  [OK]
-  +- [5/7] SGDC          train 0.093s  valid 0.001s  classif -  [OK]
-  +- [6/7] LinearSVC     train 0.150s  valid 0.001s  classif -  [OK]
-  \- [7/7] SVC_rbf       train 1.427s  valid 1.555s  classif -  [OK]
+  +- [1/4] CART          train 0.573s  valid 0.001s  classif -  [OK]
+  +- [2/4] KNN           train 0.006s  valid 0.231s  classif -  [OK]
+  +- [3/4] SGDC          train 0.086s  valid 0.001s  classif -  [OK]
+  \- [4/4] LinearSVC     train 0.576s  valid 0.002s  classif -  [OK]
 
     [OK] All experiments complete.
       Results -> C:\Users\USP\vscode\capsule-7671752\results\model_results.xlsx
 
 [3/3] Generating figures...
-    [OK] Figures saved: Figure1, OA/Kappa bars, Satellite impact, Band impact, Scatter combined
+    [OK] Figures saved: Figure1, Fig_B.1_Scatter combined, Fig_B.2_Satellite impact, Fig_B.3_Band impact, Fig_B.4_OA/Kappa bars
 
 ============================================================
   [Success]  All done!  ->  C:\Users\USP\vscode\capsule-7671752\results
 ============================================================
 
 ------------------------------------------------------------
-Ended : 2026-08-10 18:37:37
+Ended : 2026-08-11 12:37:04
