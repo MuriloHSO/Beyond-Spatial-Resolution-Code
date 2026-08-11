@@ -51,7 +51,7 @@ def check_requirements():
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            import pkg_resources
+            import pkg_resources  # type: ignore[import-not-found]
     except ImportError:
         # If pkg_resources is missing, just try running pip install directly
         print("Checking requirements...")
