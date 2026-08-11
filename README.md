@@ -35,7 +35,7 @@ git clone https://github.com/MuriloHSO/Beyond-Spatial-Resolution-Code.git
 ```bash
 python run.py
 ```
-4. The repository is structured for a quick run. To run the complete experiment, including testing all models, downloading imagery from Hugging Face, and inferencing images to determine ICT, alter the configuration in `config.toml`.
+4. The repository is structured for a quick run. To run the complete experiment, including testing all models, downloading imagery from Hugging Face, and inferencing images to determine inference speed (IS), alter the configuration in `config.toml`.
 
 ## Configuration (`config.toml`)
 All user-facing settings live in [`config.toml`](config.toml):
