@@ -441,12 +441,12 @@ def main(argv=None):
     _plot_calls = [
         ("Figure1",          lambda: plot_scatter_from_mode(
                                  plot_data, paths["figures_path"],
-                                 mode="both", output_name="Figure1.png", bands=True,
+                                 mode="both", output_name="Figure_1.png", bands=True,
                              )),
-        ("OA/Kappa bars",    lambda: plot_oa_kappa_bars(RESULTS_FILE,   paths["figures_path"])),
-        ("Satellite impact", lambda: plot_satellite_impact(RESULTS_FILE, paths["figures_path"])),
-        ("Band impact",      lambda: plot_band_impact(RESULTS_FILE,      paths["figures_path"])),
-        ("Scatter combined", lambda: plot_scatter_combined(plot_data,    paths["figures_path"])),
+        ("Fig_B.1_Scatter combined", lambda: plot_scatter_combined(plot_data,    paths["figures_path"])),
+        ("Fig_B.2_Satellite impact", lambda: plot_satellite_impact(RESULTS_FILE, paths["figures_path"])),
+        ("Fig_B.3_Band impact",      lambda: plot_band_impact(RESULTS_FILE,      paths["figures_path"])),
+        ("Fig_B.4_OA/Kappa bars",    lambda: plot_oa_kappa_bars(RESULTS_FILE,   paths["figures_path"])),
     ]
 
     _saved, _skipped = [], []

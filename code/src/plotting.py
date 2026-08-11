@@ -10,6 +10,7 @@ The module is structured in three layers:
 """
 
 import re
+from io import BytesIO
 from pathlib import Path
 
 import matplotlib.colors as mcolors
@@ -354,12 +355,14 @@ def plot_scatter_from_mode(
     plot_data,
     results_path,
     mode="both",
-    output_name="Figure_1.png",
+    output_name="figure.png",
     marker_scale_factor=1.5,
     min_point_size=18,
-    save_dpi=600,
+    save_dpi=400,
     show_xlabel=True,
     bands=True,
+    save_output=True,
+    show_plot=True,
 ):
     """
     Scatter plot of OA vs Inference Speed.
@@ -425,7 +428,7 @@ def plot_scatter_from_mode(
             else:
                 plt.scatter(
                     classification_time, oa,
-                    facecolors=mcolors.to_rgba(color, alpha=0.22),
+                    facecolors="none",
                     edgecolor=color, marker=marker, s=point_size,
                     linewidth=0.8, zorder=2,
                 )
@@ -505,10 +508,10 @@ def plot_scatter_from_mode(
     plt.gca().add_artist(legend2)
     plt.gca().add_artist(legend3_top)
 
-    if bands:
+    if bands or mode in {"all", "4"}:
         plt.legend(
             handles=bands_legend,
-            title="Number of bands", fontsize=8,
+            title="Band configuration", fontsize=8,
             loc="lower left", bbox_to_anchor=(1, 0.00), frameon=False,
         )
         plt.gca().add_artist(legend3_bottom)
@@ -519,8 +522,13 @@ def plot_scatter_from_mode(
         plt.xlabel("Inference Speed (s)")
     plt.ylabel("Overall Accuracy (OA)")
     plt.tight_layout()
-    plt.savefig(results_path / output_name, dpi=save_dpi)
-    plt.show()
+
+    if save_output and output_name is not None:
+        plt.savefig(results_path / output_name, dpi=save_dpi)
+    if show_plot:
+        plt.show()
+
+    return plt.gcf()
 
 
 # ---------------------------------------------------------------------------
@@ -530,7 +538,7 @@ def plot_scatter_from_mode(
 def plot_oa_kappa_bars(results_file, results_path):
     """
     Two-panel grouped bar chart of OA and Kappa for all conditions.
-    Saved to ``fig_appendix_OA_k_S2vsPS_ML4RS.png``.
+    Saved to ``fig_B.4_OA_k_S2vsPS_bars.png``.
     """
     PREFERRED_MODEL_ORDER = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVC_rbf"]
 
@@ -864,21 +872,47 @@ def plot_band_impact(results_file, results_path):
 # Combined scatter appendix figure
 # ---------------------------------------------------------------------------
 
+def fig_to_image_array(fig):
+    buffer = BytesIO()
+    fig.savefig(buffer, format="png", dpi=400, bbox_inches="tight", pad_inches=0.02)
+    buffer.seek(0)
+    return mpimg.imread(buffer)
+
+
 def plot_scatter_combined(plot_data, results_path):
     """
     Two-panel figure combining 4-band and all-band scatter plots.
     Saved to ``Fig_B.1.png``.
     """
-    plot_scatter_from_mode(plot_data, results_path, mode="4",   output_name="FigRes4Bands.png", show_xlabel=False, bands=False)
-    plot_scatter_from_mode(plot_data, results_path, mode="all", output_name="FigResAllBands.png",    bands=False)
+    for temp_name in ["FigRes4Bands.png", "FigResAllBands.png"]:
+        temp_path = results_path / temp_name
+        if temp_path.exists():
+            temp_path.unlink()
 
-    img_4_path   = results_path / "FigRes4Bands.png"
-    img_all_path = results_path / "FigResAllBands.png"
-    if not img_4_path.exists() or not img_all_path.exists():
-        raise FileNotFoundError("Scatter PNGs not found.")
+    fig_4 = plot_scatter_from_mode(
+        plot_data,
+        results_path,
+        mode="4",
+        output_name=None,
+        show_xlabel=False,
+        bands=False,
+        save_output=False,
+        show_plot=False,
+    )
+    fig_all = plot_scatter_from_mode(
+        plot_data,
+        results_path,
+        mode="all",
+        output_name=None,
+        bands=False,
+        save_output=False,
+        show_plot=False,
+    )
 
-    img_4   = mpimg.imread(img_4_path)
-    img_all = mpimg.imread(img_all_path)
+    img_4 = fig_to_image_array(fig_4)
+    img_all = fig_to_image_array(fig_all)
+    plt.close(fig_4)
+    plt.close(fig_all)
 
     fig2, (ax_top, ax_bottom) = plt.subplots(
         nrows=2, ncols=1, figsize=(12.0, 13.5),
