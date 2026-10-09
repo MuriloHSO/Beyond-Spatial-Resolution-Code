@@ -18,6 +18,8 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.preprocessing import StandardScaler
 from matplotlib import colors
 
+from .tuning import tune_model
+
 
 def train_and_evaluate_model(
     X_train,
@@ -29,6 +31,8 @@ def train_and_evaluate_model(
     results_path,
     apply_model_on_image: bool = True,
     condition_label=None,
+    tuning: dict = None,
+    random_state: int = 2025,
 ) -> tuple:
     """
     Train every model in *models*, evaluate on the validation set and (optionally)
@@ -49,6 +53,12 @@ def train_and_evaluate_model(
         as NaN.
     condition_label : str, optional
         Overrides the auto-generated experiment name.
+    tuning : dict, optional
+        Successive Halving settings (see :func:`src.tuning.tune_model`).  If
+        ``None`` or ``tuning["enabled"]`` is ``False``, the default
+        hyperparameters are used.
+    random_state : int
+        Seed for the hyperparameter search.
 
     Returns
     -------
@@ -130,6 +140,13 @@ def train_and_evaluate_model(
     results = []
     n_models = len(models)
     for model_idx, (model_name, model) in enumerate(models.items(), 1):
+        # Hyperparameter tuning (training set only)
+        best_params, tuning_score, tuning_time = {}, np.nan, np.nan
+        if tuning and tuning.get("enabled", False):
+            model, best_params, tuning_score, tuning_time = tune_model(
+                model_name, model, X_train, y_train, tuning, random_state
+            )
+
         # K-Fold variability on training data
         cv_acc_scores = cross_val_score(
             model, X_train_norm, y_train, cv=kfold, scoring="accuracy", n_jobs=-1
@@ -174,12 +191,16 @@ def train_and_evaluate_model(
         kappa = round(cohen_kappa_score(y_test, y_pred), 6)
         bullet  = "\\-" if model_idx == n_models else "+-"
         img_str = f"{classification_time:.3f}s" if apply_model_on_image else "-"
+        tune_str = f"  tune {tuning_time:.1f}s" if best_params else ""
         print(
             f"  {bullet} [{model_idx}/{n_models}] {model_name:<12}"
+            f"{tune_str}"
             f"  train {training_time:.3f}s"
             f"  valid {validation_time:.3f}s"
             f"  classif {img_str}  [OK]"
         )
+        if best_params:
+            print(f"  {'|' if model_idx < n_models else ' '}      best: {_format_params(best_params)}")
 
         params.append(model.get_params(deep=True))
         results.append(
@@ -196,6 +217,9 @@ def train_and_evaluate_model(
                 validation_time_std,
                 round(classification_time, 6) if apply_model_on_image else np.nan,
                 classification_time_std,
+                round(tuning_time, 6),
+                round(tuning_score, 6),
+                _format_params(best_params),
             ]
         )
 
@@ -239,7 +263,22 @@ def train_and_evaluate_model(
             "Validation Time Std (s)",
             "Classification Time (s)",
             "Classification Time Std (s)",
+            "Tuning Time (s)",
+            "Tuning CV OA",
+            "Best Params",
         ],
     )
 
     return params, results_df
+
+
+def _format_params(params: dict) -> str:
+    """Readable ``key=value`` string with floats rounded to 4 significant digits."""
+    parts = []
+    for key, value in sorted(params.items()):
+        if isinstance(value, (float, np.floating)):
+            value = f"{value:.4g}"
+        elif isinstance(value, np.integer):
+            value = int(value)
+        parts.append(f"{key}={value}")
+    return ", ".join(parts)

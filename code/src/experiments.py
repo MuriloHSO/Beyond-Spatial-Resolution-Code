@@ -45,7 +45,8 @@ def _get_imagery(paths, sensor):
 # Individual experiment runners
 # ---------------------------------------------------------------------------
 
-def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, save_excel=True):
+def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, save_excel=True,
+                         tuning=None, random_state=2025):
     X,  y  = datasets["df_s2train"][S2_BANDS_4], datasets["df_s2train"]["Class"]
     X2, y2 = datasets["df_s2val"][S2_BANDS_4],   datasets["df_s2val"]["Class"]
 
@@ -54,6 +55,8 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="S2_1",
+        tuning=tuning,
+        random_state=random_state,
     )
 
     if save_excel:
@@ -62,7 +65,8 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
     return params, results
 
 
-def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, save_excel=True):
+def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, save_excel=True,
+                         tuning=None, random_state=2025):
     X,  y  = datasets["df_s2train"][S2_BANDS_ALL], datasets["df_s2train"]["Class"]
     X2, y2 = datasets["df_s2val"][S2_BANDS_ALL],   datasets["df_s2val"]["Class"]
 
@@ -71,6 +75,8 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="S2_2",
+        tuning=tuning,
+        random_state=random_state,
     )
 
     if save_excel:
@@ -79,7 +85,8 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
     return params, results
 
 
-def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, save_excel=True):
+def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, save_excel=True,
+                         tuning=None, random_state=2025):
     X,  y  = datasets["df_psstrain"][PS_BANDS_4], datasets["df_psstrain"]["Class"]
     X2, y2 = datasets["df_pssval"][PS_BANDS_4],   datasets["df_pssval"]["Class"]
 
@@ -88,6 +95,8 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="PS_1",
+        tuning=tuning,
+        random_state=random_state,
     )
 
     if save_excel:
@@ -96,7 +105,8 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
     return params, results
 
 
-def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, save_excel=True):
+def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, save_excel=True,
+                         tuning=None, random_state=2025):
     X,  y  = datasets["df_psstrain"][PS_BANDS_ALL], datasets["df_psstrain"]["Class"]
     X2, y2 = datasets["df_pssval"][PS_BANDS_ALL],   datasets["df_pssval"]["Class"]
 
@@ -105,6 +115,8 @@ def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, s
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="PS_2",
+        tuning=tuning,
+        random_state=random_state,
     )
 
     if save_excel:
@@ -129,7 +141,14 @@ EXPERIMENT_QUEUE = {
 # High-level dispatcher
 # ---------------------------------------------------------------------------
 
-def run_all_experiments(selected_experiments: list, models: dict, datasets: dict, paths: dict) -> pd.DataFrame:
+def run_all_experiments(
+    selected_experiments: list,
+    models: dict,
+    datasets: dict,
+    paths: dict,
+    tuning: dict = None,
+    random_state: int = 2025,
+) -> pd.DataFrame:
     """
     Run a list of experiments and return the combined results DataFrame.
 
@@ -145,6 +164,10 @@ def run_all_experiments(selected_experiments: list, models: dict, datasets: dict
         Output of :func:`src.data.load_datasets`.
     paths : dict
         Output of :func:`src.paths.setup_paths`.
+    tuning : dict, optional
+        Successive Halving settings; ``None`` keeps default hyperparameters.
+    random_state : int
+        Seed for the hyperparameter search.
 
     Returns
     -------
@@ -173,6 +196,8 @@ def run_all_experiments(selected_experiments: list, models: dict, datasets: dict
             paths=paths,
             apply_model_on_image=apply_flag,
             save_excel=False,
+            tuning=tuning,
+            random_state=random_state,
         )
         selected_results.append(results_i)
 

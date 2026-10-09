@@ -33,6 +33,8 @@ Options
     --no-image                  Disable full-image classification for every
                                 experiment (overrides config.toml per-entry flag)
     --skip-plots                Do not generate figures after the experiments.
+    --no-tuning                 Use default hyperparameters (skip the
+                                Successive Halving search in config.toml)
 """
 
 import os
@@ -80,6 +82,7 @@ matplotlib.use("Agg")  # Non-interactive backend suitable for Code Ocean
 from matplotlib import rc
 
 warnings.filterwarnings("ignore")
+os.environ["PYTHONWARNINGS"] = "ignore"  # also silence parallel (joblib) worker processes
 
 # ---------------------------------------------------------------------------
 # TOML loading (tomllib is built-in for Python 3.11+; fall back to tomli)
@@ -120,6 +123,12 @@ ALL_EXPERIMENTS = ["S2_4b", "S2_Allb", "PS_4b", "PS_Allb"]
 # Fallback defaults (used when config.toml is missing and no CLI flag is given)
 _FALLBACK_RANDOM_STATE = 2025
 _FALLBACK_MODELS: list = []          # empty → all models
+_FALLBACK_TUNING = {
+    "enabled": True,
+    "n_candidates": 81,
+    "factor": 3,
+    "cv_folds": 5,
+}
 _FALLBACK_EXPERIMENTS = [
     {"name": "S2_4b",   "apply_model_on_image": True},
     {"name": "S2_Allb", "apply_model_on_image": True},
@@ -168,6 +177,10 @@ def parse_args(argv=None):
     parser.add_argument(
         "--skip-plots", action="store_true", default=False,
         help="Skip figure generation after the experiments.",
+    )
+    parser.add_argument(
+        "--no-tuning", action="store_true", default=False,
+        help="Use default hyperparameters instead of the Successive Halving search.",
     )
 
     return parser.parse_args(argv)
@@ -228,11 +241,17 @@ def resolve_config(args) -> dict:
     # --- skip_plots ---
     skip_plots = args.skip_plots or toml.get("skip_plots", False)
 
+    # --- hyperparameter tuning ---
+    tuning = {**_FALLBACK_TUNING, **toml.get("tuning", {})}
+    if args.no_tuning:
+        tuning["enabled"] = False
+
     return {
         "random_state": random_state,
         "enabled_models": enabled_models,
         "selected_experiments": selected_experiments,
         "skip_plots": skip_plots,
+        "tuning": tuning,
     }
 
 
@@ -343,6 +362,14 @@ def main(argv=None):
     print(f"  Models        : {', '.join(model_names)}  ({len(model_names)} total)")
     print(f"  Experiments   : {', '.join(exp_names)}")
     print(f"  Image classif.: {'enabled' if any_img else 'disabled'}")
+    tuning = cfg["tuning"]
+    if tuning["enabled"]:
+        print(
+            f"  Tuning        : Successive Halving  ({tuning['n_candidates']} candidates, "
+            f"factor {tuning['factor']}, {tuning['cv_folds']}-fold CV)"
+        )
+    else:
+        print("  Tuning        : disabled (default hyperparameters)")
     print(f"  Figures       : {'skipped' if cfg['skip_plots'] else 'enabled'}")
     print()
 
@@ -350,6 +377,7 @@ def main(argv=None):
     plan_steps = [
         "Load datasets",
         f"Run experiments  ({len(exp_list)} exp × {len(model_names)} model(s)"
+        + ("  [+tuning]" if tuning["enabled"] else "")
         + ("  [+image]" if any_img else "") + ")",
     ]
     if not cfg["skip_plots"]:
@@ -420,6 +448,8 @@ def main(argv=None):
     models,
     datasets,
     paths,
+    tuning=tuning,
+    random_state=cfg["random_state"],
     )
     print(f"\n    [OK] All experiments complete.")
     print(f"      Results -> {paths['results_path'] / 'model_results.xlsx'}")

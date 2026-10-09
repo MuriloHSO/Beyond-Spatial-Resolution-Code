@@ -13,6 +13,7 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
     - `data.py` — CSV dataset loading
     - `download.py` — download image dataset from Hugging Face
     - `training.py` — `train_and_evaluate_model` function
+    - `tuning.py` — hyperparameter search spaces and Successive Halving tuning
     - `experiments.py` — per-experiment runners and dispatcher
     - `plotting.py` — all figure-generation functions
 
@@ -47,9 +48,18 @@ All user-facing settings live in [`config.toml`](config.toml):
 | `skip_plots` | Set to `true` to skip figure generation |
 | `apply_model_on_image` | `true` to classify the full satellite image in every experiment; `false` to skip (faster) |
 | `experiments` | List of experiment names to run |
+| `[tuning] enabled` | `true` to tune every model's hyperparameters before evaluation; `false` to use scikit-learn defaults (also `--no-tuning`) |
+| `[tuning] n_candidates` | Random hyperparameter configurations sampled per model |
+| `[tuning] factor` | Successive Halving elimination rate between rounds |
+| `[tuning] cv_folds` | Inner stratified CV folds used to score each configuration |
 
-Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGDC`, `LinearSVC`, `SVM_rbf`  
+Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGDC`, `LinearSVC`, `SVC_rbf`  
 Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`
+
+## Hyperparameter tuning
+Every model is tuned with Successive Halving ([`HalvingRandomSearchCV`](https://scikit-learn.org/stable/modules/grid_search.html#successive-halving-user-guide)) before it is evaluated. For each model, `n_candidates` configurations are sampled from the search space in `src/tuning.py` and scored by stratified cross-validation on a small subsample of the training set. Only the best `1/factor` of them advance to the next round, which uses `factor` times more samples, until the remaining configurations are scored on the full training set. The highest-scoring configuration (by overall accuracy) is then trained and evaluated as before.
+
+Tuning uses only the training set; the validation set is never seen during the search. Standardisation is fit inside each inner fold to avoid leakage. `model_results.xlsx` reports the search time (`Tuning Time (s)`), the best inner-CV overall accuracy (`Tuning CV OA`) and the selected hyperparameters (`Best Params`). The training, validation and classification times refer to the final tuned model, so they remain comparable with untuned runs.
 
 ## Declaration of AI-assisted coding
 We refactored the original notebook (.ipynb) code initially used for the paper into a version that meets Code Ocean's reproducibility requirements, using the free versions of Gemini 2.0 and GitHub Copilot (from June/July 2026).

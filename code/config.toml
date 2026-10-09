@@ -47,3 +47,21 @@ experiments = [
 #                        image classification.
 
 apply_model_on_image = false
+
+# -----------------------------------------------------------------------------
+# Hyperparameter tuning (Successive Halving, scikit-learn HalvingRandomSearchCV)
+#
+# enabled      : true to tune every model on the training set before it is
+#                evaluated; false to use scikit-learn default hyperparameters.
+# n_candidates : number of random configurations sampled per model.  Each
+#                round keeps the best 1/factor of them and gives the
+#                survivors factor-times more training samples.
+# factor       : elimination rate between rounds.
+# cv_folds     : inner stratified folds used to score each configuration.
+# Search spaces are defined in src/tuning.py.
+
+[tuning]
+enabled = true
+n_candidates = 81
+factor = 3
+cv_folds = 5
