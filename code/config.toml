@@ -58,10 +58,16 @@ apply_model_on_image = false
 #                survivors factor-times more training samples.
 # factor       : elimination rate between rounds.
 # cv_folds     : inner stratified folds used to score each configuration.
-# Search spaces are defined in src/tuning.py.
+# block_size   : side (m) of the square spatial blocks used to build the inner
+#                folds; all training points of a block stay in the same fold,
+#                so neighbouring (near-duplicate) points never sit on both
+#                sides of a split.
+# Search spaces are defined in src/tuning.py.  Tuned results are saved to
+# results/model_results_tuned.xlsx (model_results.xlsx keeps the defaults).
 
 [tuning]
 enabled = true
 n_candidates = 81
 factor = 3
 cv_folds = 5
+block_size = 1000

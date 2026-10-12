@@ -128,6 +128,7 @@ _FALLBACK_TUNING = {
     "n_candidates": 81,
     "factor": 3,
     "cv_folds": 5,
+    "block_size": 1000,
 }
 _FALLBACK_EXPERIMENTS = [
     {"name": "S2_4b",   "apply_model_on_image": True},
@@ -366,7 +367,8 @@ def main(argv=None):
     if tuning["enabled"]:
         print(
             f"  Tuning        : Successive Halving  ({tuning['n_candidates']} candidates, "
-            f"factor {tuning['factor']}, {tuning['cv_folds']}-fold CV)"
+            f"factor {tuning['factor']}, {tuning['cv_folds']}-fold CV "
+            f"over {tuning['block_size']} m spatial blocks)"
         )
     else:
         print("  Tuning        : disabled (default hyperparameters)")
@@ -407,7 +409,7 @@ def main(argv=None):
     from src.paths import setup_paths
     from src.download import ensure_imagery
     from src.data import load_datasets
-    from src.experiments import run_all_experiments
+    from src.experiments import results_filename, run_all_experiments
     from src.plotting import (
         load_plot_data,
         plot_scatter_from_mode,
@@ -452,14 +454,14 @@ def main(argv=None):
     random_state=cfg["random_state"],
     )
     print(f"\n    [OK] All experiments complete.")
-    print(f"      Results -> {paths['results_path'] / 'model_results.xlsx'}")
+    RESULTS_FILE = paths["results_path"] / results_filename(tuning)
+    print(f"      Results -> {RESULTS_FILE}")
 
     # -- Step 3 (optional): Generate figures ---------------------
     if cfg["skip_plots"]:
         _print_all_done(paths["results_path"])
         return
 
-    RESULTS_FILE = paths["results_path"] / "model_results.xlsx"
     if not RESULTS_FILE.exists():
         print(f"\n    [!]  Results file not found at {RESULTS_FILE}. Skipping figures.")
         _print_all_done(paths["results_path"])

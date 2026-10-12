@@ -8,6 +8,12 @@ training set; only the best third (``factor = 3``) advances to the next round,
 which uses three times more samples, until the survivors are evaluated on the
 full training set.  Tuning uses only the training set (inner cross-validation),
 so the validation set remains fully held out for the reported metrics.
+
+Training points are only a few metres apart, so neighbouring points often fall
+in the same pixel.  With random folds, near-duplicates end up on both sides of
+a split and the search favours configurations that memorise them.  The inner
+folds therefore split by spatial blocks (square grid cells of ``block_size``
+metres): all points of a block are in the same fold.
 """
 
 import time
@@ -15,7 +21,7 @@ import time
 from scipy.stats import loguniform, randint, uniform
 from sklearn.base import clone
 from sklearn.experimental import enable_halving_search_cv  # noqa: F401
-from sklearn.model_selection import HalvingRandomSearchCV, StratifiedKFold
+from sklearn.model_selection import HalvingRandomSearchCV, StratifiedGroupKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -71,7 +77,14 @@ SEARCH_SPACES = {
 # Tuning
 # ---------------------------------------------------------------------------
 
-def tune_model(model_name, model, X_train, y_train, tuning: dict, random_state: int = 2025):
+def spatial_blocks(df, block_size: float):
+    """Label each point with the ``block_size`` x ``block_size`` m grid cell containing it."""
+    col = (df["X"] // block_size).astype(int).astype(str)
+    row = (df["Y"] // block_size).astype(int).astype(str)
+    return (col + "_" + row).to_numpy()
+
+
+def tune_model(model_name, model, X_train, y_train, groups, tuning: dict, random_state: int = 2025):
     """
     Search the hyperparameters of *model* with Successive Halving.
 
@@ -86,6 +99,8 @@ def tune_model(model_name, model, X_train, y_train, tuning: dict, random_state: 
         Base (untrained) estimator; it is cloned, never modified.
     X_train, y_train : array-like
         Raw (unscaled) training data.
+    groups : array-like
+        Spatial block of each training point (see :func:`spatial_blocks`).
     tuning : dict
         ``n_candidates``, ``factor`` and ``cv_folds`` settings.
     random_state : int
@@ -107,7 +122,7 @@ def tune_model(model_name, model, X_train, y_train, tuning: dict, random_state: 
         factor=tuning["factor"],
         resource="n_samples",
         min_resources="exhaust",
-        cv=StratifiedKFold(n_splits=tuning["cv_folds"], shuffle=True, random_state=random_state),
+        cv=StratifiedGroupKFold(n_splits=tuning["cv_folds"], shuffle=True, random_state=random_state),
         scoring="accuracy",
         refit=False,
         random_state=random_state,
@@ -115,7 +130,7 @@ def tune_model(model_name, model, X_train, y_train, tuning: dict, random_state: 
     )
 
     start_time = time.time()
-    search.fit(X_train, y_train)
+    search.fit(X_train, y_train, groups=groups)
     tuning_time = time.time() - start_time
 
     best_params = {k.removeprefix("model__"): v for k, v in search.best_params_.items()}

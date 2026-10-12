@@ -52,14 +52,17 @@ All user-facing settings live in [`config.toml`](config.toml):
 | `[tuning] n_candidates` | Random hyperparameter configurations sampled per model |
 | `[tuning] factor` | Successive Halving elimination rate between rounds |
 | `[tuning] cv_folds` | Inner stratified CV folds used to score each configuration |
+| `[tuning] block_size` | Side (m) of the square spatial blocks used to build the inner CV folds |
 
 Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGDC`, `LinearSVC`, `SVC_rbf`  
 Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`
 
 ## Hyperparameter tuning
-Every model is tuned with Successive Halving ([`HalvingRandomSearchCV`](https://scikit-learn.org/stable/modules/grid_search.html#successive-halving-user-guide)) before it is evaluated. For each model, `n_candidates` configurations are sampled from the search space in `src/tuning.py` and scored by stratified cross-validation on a small subsample of the training set. Only the best `1/factor` of them advance to the next round, which uses `factor` times more samples, until the remaining configurations are scored on the full training set. The highest-scoring configuration (by overall accuracy) is then trained and evaluated as before.
+Every model is tuned with Successive Halving ([`HalvingRandomSearchCV`](https://scikit-learn.org/stable/modules/grid_search.html#successive-halving-user-guide)) before it is evaluated. For each model, `n_candidates` configurations are sampled from the search space in `src/tuning.py` and scored by stratified, spatially grouped cross-validation on a small subsample of the training set. Only the best `1/factor` of them advance to the next round, which uses `factor` times more samples, until the remaining configurations are scored on the full training set. The highest-scoring configuration (by overall accuracy) is then trained and evaluated as before.
 
-Tuning uses only the training set; the validation set is never seen during the search. Standardisation is fit inside each inner fold to avoid leakage. `model_results.xlsx` reports the search time (`Tuning Time (s)`), the best inner-CV overall accuracy (`Tuning CV OA`) and the selected hyperparameters (`Best Params`). The training, validation and classification times refer to the final tuned model, so they remain comparable with untuned runs.
+Training points are only a few metres apart, so neighbouring points often fall in the same pixel. With random folds, these near-duplicates end up on both sides of a split and the search favours configurations that memorise them. The inner folds are therefore built from square spatial blocks of `block_size` metres (1 km by default): all points in a block stay in the same fold.
+
+Tuning uses only the training set; the validation set is never seen during the search. Standardisation is fit inside each inner fold to avoid leakage. Tuned results are saved to `model_results_tuned.xlsx`, so `model_results.xlsx` keeps the default-hyperparameter results. The tuned results file reports the search time (`Tuning Time (s)`), the best inner-CV overall accuracy (`Tuning CV OA`) and the selected hyperparameters (`Best Params`). The training, validation and classification times refer to the final tuned model, so they remain comparable with untuned runs.
 
 ## Declaration of AI-assisted coding
 We refactored the original notebook (.ipynb) code initially used for the paper into a version that meets Code Ocean's reproducibility requirements, using the free versions of Gemini 2.0 and GitHub Copilot (from June/July 2026).

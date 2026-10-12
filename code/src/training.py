@@ -33,6 +33,7 @@ def train_and_evaluate_model(
     condition_label=None,
     tuning: dict = None,
     random_state: int = 2025,
+    groups=None,
 ) -> tuple:
     """
     Train every model in *models*, evaluate on the validation set and (optionally)
@@ -59,6 +60,8 @@ def train_and_evaluate_model(
         hyperparameters are used.
     random_state : int
         Seed for the hyperparameter search.
+    groups : array-like, optional
+        Spatial block of each training point, used to split the tuning folds.
 
     Returns
     -------
@@ -144,7 +147,7 @@ def train_and_evaluate_model(
         best_params, tuning_score, tuning_time = {}, np.nan, np.nan
         if tuning and tuning.get("enabled", False):
             model, best_params, tuning_score, tuning_time = tune_model(
-                model_name, model, X_train, y_train, tuning, random_state
+                model_name, model, X_train, y_train, groups, tuning, random_state
             )
 
         # K-Fold variability on training data

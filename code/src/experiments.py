@@ -7,6 +7,7 @@ Experiment definitions and the dispatcher that runs them.
 import pandas as pd
 from .training import train_and_evaluate_model
 from .paths import get_image_lists
+from .tuning import spatial_blocks
 
 
 # ---------------------------------------------------------------------------
@@ -37,6 +38,11 @@ PS_BANDS_ALL = [
     "B1_2", "B2_2", "B3_2", "B4_2", "B5_2", "B6_2", "B7_2", "B8_2",
 ]
 
+def _tuning_groups(df_train, tuning):
+    if tuning and tuning.get("enabled", False):
+        return spatial_blocks(df_train, tuning["block_size"])
+    return None
+
 def _get_imagery(paths, sensor):
     images = get_image_lists(paths)
     return images[sensor][0] if images[sensor] else None
@@ -48,6 +54,7 @@ def _get_imagery(paths, sensor):
 def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, save_excel=True,
                          tuning=None, random_state=2025):
     X,  y  = datasets["df_s2train"][S2_BANDS_4], datasets["df_s2train"]["Class"]
+    groups = _tuning_groups(datasets["df_s2train"], tuning)
     X2, y2 = datasets["df_s2val"][S2_BANDS_4],   datasets["df_s2val"]["Class"]
 
     imagery = _get_imagery(paths, "S2")
@@ -57,6 +64,7 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
         condition_label="S2_1",
         tuning=tuning,
         random_state=random_state,
+        groups=groups,
     )
 
     if save_excel:
@@ -68,6 +76,7 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
 def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, save_excel=True,
                          tuning=None, random_state=2025):
     X,  y  = datasets["df_s2train"][S2_BANDS_ALL], datasets["df_s2train"]["Class"]
+    groups = _tuning_groups(datasets["df_s2train"], tuning)
     X2, y2 = datasets["df_s2val"][S2_BANDS_ALL],   datasets["df_s2val"]["Class"]
 
     imagery = _get_imagery(paths, "S2")
@@ -77,6 +86,7 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
         condition_label="S2_2",
         tuning=tuning,
         random_state=random_state,
+        groups=groups,
     )
 
     if save_excel:
@@ -88,6 +98,7 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
 def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, save_excel=True,
                          tuning=None, random_state=2025):
     X,  y  = datasets["df_psstrain"][PS_BANDS_4], datasets["df_psstrain"]["Class"]
+    groups = _tuning_groups(datasets["df_psstrain"], tuning)
     X2, y2 = datasets["df_pssval"][PS_BANDS_4],   datasets["df_pssval"]["Class"]
 
     imagery = _get_imagery(paths, "PS")
@@ -97,6 +108,7 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
         condition_label="PS_1",
         tuning=tuning,
         random_state=random_state,
+        groups=groups,
     )
 
     if save_excel:
@@ -108,6 +120,7 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
 def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, save_excel=True,
                          tuning=None, random_state=2025):
     X,  y  = datasets["df_psstrain"][PS_BANDS_ALL], datasets["df_psstrain"]["Class"]
+    groups = _tuning_groups(datasets["df_psstrain"], tuning)
     X2, y2 = datasets["df_pssval"][PS_BANDS_ALL],   datasets["df_pssval"]["Class"]
 
     imagery = _get_imagery(paths, "PS")
@@ -117,6 +130,7 @@ def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, s
         condition_label="PS_2",
         tuning=tuning,
         random_state=random_state,
+        groups=groups,
     )
 
     if save_excel:
@@ -166,6 +180,8 @@ def run_all_experiments(
         Output of :func:`src.paths.setup_paths`.
     tuning : dict, optional
         Successive Halving settings; ``None`` keeps default hyperparameters.
+        Tuned results are saved to ``model_results_tuned.xlsx`` so the
+        default-hyperparameter results are not overwritten.
     random_state : int
         Seed for the hyperparameter search.
 
@@ -173,7 +189,7 @@ def run_all_experiments(
     -------
     pd.DataFrame
         Concatenated results from all experiments, also saved to
-        ``results_path/model_results.xlsx``.
+        ``results_path/model_results.xlsx`` (or ``model_results_tuned.xlsx``).
     """
     selected_results = []
     n_exps = len(selected_experiments)
@@ -206,5 +222,11 @@ def run_all_experiments(
         if selected_results
         else pd.DataFrame()
     )
-    combined.to_excel(paths["results_path"] / "model_results.xlsx", index=False)
+    combined.to_excel(paths["results_path"] / results_filename(tuning), index=False)
     return combined
+
+
+def results_filename(tuning: dict = None) -> str:
+    """Name of the combined results workbook for this run."""
+    tuned = bool(tuning and tuning.get("enabled", False))
+    return "model_results_tuned.xlsx" if tuned else "model_results.xlsx"
