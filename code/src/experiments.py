@@ -51,7 +51,7 @@ def _get_imagery(paths, sensor):
 # Individual experiment runners
 # ---------------------------------------------------------------------------
 
-def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, save_excel=True,
+def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, save_csv=True,
                          tuning=None, random_state=2025):
     X,  y  = datasets["df_s2train"][S2_BANDS_4], datasets["df_s2train"]["Class"]
     groups = _tuning_groups(datasets["df_s2train"], tuning)
@@ -67,13 +67,13 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
         groups=groups,
     )
 
-    if save_excel:
-        results.to_excel(paths["results_path"] / "S2_4b.xlsx", index=False)
+    if save_csv:
+        results.to_csv(paths["results_path"] / "S2_4b.csv", index=False)
 
     return params, results
 
 
-def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, save_excel=True,
+def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
                          tuning=None, random_state=2025):
     X,  y  = datasets["df_s2train"][S2_BANDS_ALL], datasets["df_s2train"]["Class"]
     groups = _tuning_groups(datasets["df_s2train"], tuning)
@@ -89,13 +89,13 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
         groups=groups,
     )
 
-    if save_excel:
-        results.to_excel(paths["results_path"] / "S2_Allb.xlsx", index=False)
+    if save_csv:
+        results.to_csv(paths["results_path"] / "S2_Allb.csv", index=False)
 
     return params, results
 
 
-def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, save_excel=True,
+def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, save_csv=True,
                          tuning=None, random_state=2025):
     X,  y  = datasets["df_psstrain"][PS_BANDS_4], datasets["df_psstrain"]["Class"]
     groups = _tuning_groups(datasets["df_psstrain"], tuning)
@@ -111,13 +111,13 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
         groups=groups,
     )
 
-    if save_excel:
-        results.to_excel(paths["results_path"] / "PS_4b.xlsx", index=False)
+    if save_csv:
+        results.to_csv(paths["results_path"] / "PS_4b.csv", index=False)
 
     return params, results
 
 
-def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, save_excel=True,
+def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
                          tuning=None, random_state=2025):
     X,  y  = datasets["df_psstrain"][PS_BANDS_ALL], datasets["df_psstrain"]["Class"]
     groups = _tuning_groups(datasets["df_psstrain"], tuning)
@@ -133,8 +133,8 @@ def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, s
         groups=groups,
     )
 
-    if save_excel:
-        results.to_excel(paths["results_path"] / "PS_Allb.xlsx", index=False)
+    if save_csv:
+        results.to_csv(paths["results_path"] / "PS_Allb.csv", index=False)
 
     return params, results
 
@@ -180,7 +180,7 @@ def run_all_experiments(
         Output of :func:`src.paths.setup_paths`.
     tuning : dict, optional
         Successive Halving settings; ``None`` keeps default hyperparameters.
-        Tuned results are saved to ``model_results_tuned.xlsx`` so the
+        Tuned results are saved to ``model_results_tuned.csv`` so the
         default-hyperparameter results are not overwritten.
     random_state : int
         Seed for the hyperparameter search.
@@ -189,7 +189,7 @@ def run_all_experiments(
     -------
     pd.DataFrame
         Concatenated results from all experiments, also saved to
-        ``results_path/model_results.xlsx`` (or ``model_results_tuned.xlsx``).
+        ``results_path/model_results.csv`` (or ``model_results_tuned.csv``).
     """
     selected_results = []
     n_exps = len(selected_experiments)
@@ -211,7 +211,7 @@ def run_all_experiments(
             datasets=datasets,
             paths=paths,
             apply_model_on_image=apply_flag,
-            save_excel=False,
+            save_csv=False,
             tuning=tuning,
             random_state=random_state,
         )
@@ -222,11 +222,11 @@ def run_all_experiments(
         if selected_results
         else pd.DataFrame()
     )
-    combined.to_excel(paths["results_path"] / results_filename(tuning), index=False)
+    combined.to_csv(paths["results_path"] / results_filename(tuning), index=False)
     return combined
 
 
 def results_filename(tuning: dict = None) -> str:
-    """Name of the combined results workbook for this run."""
+    """Name of the combined results table (CSV) for this run."""
     tuned = bool(tuning and tuning.get("enabled", False))
-    return "model_results_tuned.xlsx" if tuned else "model_results.xlsx"
+    return "model_results_tuned.csv" if tuned else "model_results.csv"

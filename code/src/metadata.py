@@ -185,7 +185,7 @@ def write_metadata(
 
     results_path = Path(paths["results_path"])
 
-    results["excel_files"] = _list_relative(results_path)
+    results["result_files"] = _list_relative(results_path)
 
     if "figures_path" in paths:
 
@@ -207,8 +207,8 @@ def write_metadata(
 
     checksums = {}
 
-    for excel in results_path.glob("*.xlsx"):
-        checksums[excel.name] = _sha256(excel)
+    for table in results_path.glob("*.csv"):
+        checksums[table.name] = _sha256(table)
 
     metadata["checksums"] = checksums
 

@@ -140,7 +140,7 @@ def pick_low_high_imagery(condition_names):
 def load_results_dataframe(results_file):
     if not Path(results_file).exists():
         raise FileNotFoundError(f"Results file not found: {results_file}")
-    return pd.read_excel(results_file)
+    return pd.read_csv(results_file)
 
 
 def resolve_time_columns(df_results):
@@ -283,7 +283,7 @@ def load_plot_data(results_file):
     )
 
     if grouped.empty:
-        raise ValueError("No valid data was loaded from the XLSX file.")
+        raise ValueError("No valid data was loaded from the results file.")
 
     imagery_names = [str(x).strip() for x in grouped[imagery_col].unique()]
     all_data = nested_dict_from_grouped(grouped, imagery_col, model_col, oa_col, ct_col, tt_col)

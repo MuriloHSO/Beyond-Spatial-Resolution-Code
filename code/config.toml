@@ -63,7 +63,7 @@ apply_model_on_image = false
 #                so neighbouring (near-duplicate) points never sit on both
 #                sides of a split.
 # Search spaces are defined in src/tuning.py.  Tuned results are saved to
-# results/model_results_tuned.xlsx (model_results.xlsx keeps the defaults).
+# results/model_results_tuned.csv (model_results.csv keeps the defaults).
 
 [tuning]
 enabled = true
