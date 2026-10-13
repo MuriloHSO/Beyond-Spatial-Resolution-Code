@@ -395,7 +395,7 @@ def main(argv=None):
     from src.config import CLASS_NAMES, build_models
     from src.paths import setup_paths
     from src.download import ensure_imagery
-    from src.data import load_datasets
+    from src.data import load_datasets, sample_counts
     from src.experiments import results_filename, run_all_experiments
     from src.plotting import (
         load_plot_data,
@@ -430,7 +430,8 @@ def main(argv=None):
     # -- Step 1: Load datasets ----------------------------------
     print(f"\n[1/{total_steps}] Loading datasets...")
     datasets = load_datasets(paths)
-    print("    [OK] Datasets loaded.\n")
+    sample_counts(datasets).to_csv(paths["results_path"] / "sample_counts.csv", index=False)
+    print("    [OK] Datasets loaded (sample counts -> sample_counts.csv).\n")
 
     # -- Step 2: Run experiments --------------------------------
     print(f"[2/{total_steps}] Running experiments...")

@@ -23,6 +23,7 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 
 `results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
 - Classification maps (PNG and TIFF), metric tables, and figures
+- `sample_counts.csv` — number of training and validation points per sensor and class
 - `model_results_tuned.csv` — OA, Cohen's kappa, macro F1, training time (TT), image inference speed (IS) and selected hyperparameters of every model
 - `class_metrics_tuned.csv` — per-class precision, recall, F1 and support on the validation set
 - `confusion_matrices_tuned.csv` — confusion matrix of every model on the validation set (long format: true class, predicted class, count); `figures/Fig_B.7_confusion_matrices.png` shows those of the most accurate classifier of each experiment
