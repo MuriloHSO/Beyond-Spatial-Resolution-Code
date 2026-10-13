@@ -4,9 +4,9 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 ## Repository Structure
 `code/`
 - `config.toml` — Sets which code to run: full or quick. It also allows for the selection of models and band configurations.
-- `run.py` — Main entry point. Edit the `DEFAULT_*` constants at the top, or pass command-line arguments (see `--help`).
+- `run.py` — Main entry point. Reads `config.toml`; command-line arguments override it (see `--help`). Checks the installed package versions against `requirements.txt`.
 - `run.sh` — Bash entry point required by Code Ocean. Calls `run.py` and forwards any CLI arguments.
-- `requirements.txt` - lists the required Python packages to run the code.
+- `requirements.txt` - lists the required Python packages, with pinned versions (Python 3.12 or newer).
 - `src/` - Python package containing all library code:
     - `config.py` — builds the classifiers dictionary
     - `paths.py` — filesystem paths and output directory creation
@@ -19,27 +19,34 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 
 `data/` - input data directory (mirrors Code Ocean's `/data`):
 - CSV training and validation datasets (included in the repository)
-- `Imagery/` — must contain the GeoTIFF imagery downloaded from [Hugging Face](https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code) (not includeded)
+- `Imagery/` — must contain the GeoTIFF imagery downloaded from [Hugging Face](https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code) (not included)
 
 `results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
 - Classification maps (PNG and TIFF), metric tables, and figures
 
-`scratch/` - temporary working directory for large intermediate files.
+`scratch/` - temporary and internal files, not part of the results (git-ignored), e.g. the breakdown of the training time (`time_breakdown_tuned.csv`).
+
+`environment/Dockerfile` and `.codeocean/environment.json` - computational environment of the Code Ocean capsule (managed by Code Ocean).
 
 ## Quick Start
 1. Clone this repository: 
 ```bash
 git clone https://github.com/MuriloHSO/Beyond-Spatial-Resolution-Code.git
 ```
-2. Open [`config.toml`](config.toml) and choose your models, experiments and settings.
-3. Run:
+2. Install the pinned packages (Python 3.12 or newer):
 ```bash
+pip install -r code/requirements.txt
+```
+3. Open [`code/config.toml`](code/config.toml) and choose your models, experiments and settings.
+4. Run from the `code` folder:
+```bash
+cd code
 python run.py
 ```
-4. The repository is structured for a quick run. To run the complete experiment, including testing all models, downloading imagery from Hugging Face, and inferencing images to determine inference speed (IS), alter the configuration in `config.toml`.
+5. The repository is structured for a quick run. To run the complete experiment, including testing all models, downloading imagery from Hugging Face, and inferencing images to determine inference speed (IS), alter the configuration in `config.toml`.
 
 ## Configuration (`config.toml`)
-All user-facing settings live in [`config.toml`](config.toml):
+All user-facing settings live in [`code/config.toml`](code/config.toml):
 
 | Key | Description |
 |-----|-------------|

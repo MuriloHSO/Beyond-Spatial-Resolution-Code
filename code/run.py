@@ -44,31 +44,30 @@ from pathlib import Path
 
 
 def check_requirements():
-    """Check if required packages are installed, and run pip install if not."""
+    """Compare installed package versions with the pins in requirements.txt; install only if they differ."""
+    from importlib.metadata import PackageNotFoundError, version
+
     req_file = Path(__file__).parent / "requirements.txt"
     if not req_file.exists():
         return
 
-    try:
-        import warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            import pkg_resources  # type: ignore[import-not-found]
-    except ImportError:
-        # If pkg_resources is missing, just try running pip install directly
-        print("Checking requirements...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", str(req_file)])
-        return
-
-    # Parse requirements.txt
+    mismatches = []
     with open(req_file, "r") as f:
-        requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            name, _, pinned = line.partition("==")
+            try:
+                installed = version(name)
+            except PackageNotFoundError:
+                installed = None
+            if pinned and installed != pinned:
+                mismatches.append(f"{name} (installed {installed}, required {pinned})")
 
-    try:
-        pkg_resources.require(requirements)
-    except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict) as e:
-        print(f"Missing or outdated dependency: {e.req}")
-        print("Installing required packages...")
+    if mismatches:
+        print("Packages differ from requirements.txt:\n  " + "\n  ".join(mismatches))
+        print("Installing the required versions...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", str(req_file)])
         print("Dependencies installed successfully.\n")
 
@@ -85,27 +84,14 @@ warnings.filterwarnings("ignore")
 os.environ["PYTHONWARNINGS"] = "ignore"  # also silence parallel (joblib) worker processes
 
 # ---------------------------------------------------------------------------
-# TOML loading (tomllib is built-in for Python 3.11+; fall back to tomli)
+# TOML loading (tomllib is part of the standard library; Python 3.12+ required)
 # ---------------------------------------------------------------------------
 
-try:
-    import tomllib                          # Python 3.11+
-except ModuleNotFoundError:
-    try:
-        import tomli as tomllib             # pip install tomli
-    except ModuleNotFoundError:
-        tomllib = None
+import tomllib
 
 
 def load_toml_config(path: Path) -> dict:
-    """Load a TOML config file. Returns an empty dict if TOML is unavailable."""
-    if tomllib is None:
-        print(
-            f"WARNING: Could not import 'tomllib' or 'tomli'. "
-            f"Config file '{path}' will be ignored.\n"
-            f"  On Python <3.11 run: pip install tomli"
-        )
-        return {}
+    """Load a TOML config file. Returns an empty dict if the file is missing."""
     if not path.exists():
         print(f"WARNING: Config file not found at '{path}'. Using defaults.")
         return {}
