@@ -63,6 +63,9 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
     metadata_path = results_path / "Metadata"
 
+    # Temporary/internal files, not part of the published results (git-ignored).
+    scratch_path = base / "scratch"
+
     # ------------------------------------------------------------------
     # Create directories
     # ------------------------------------------------------------------
@@ -81,6 +84,7 @@ def setup_paths(base: Path | str | None = None) -> dict:
         models_path,
         logs_path,
         metadata_path,
+        scratch_path,
     ]
 
     for directory in directories:
@@ -106,6 +110,7 @@ def setup_paths(base: Path | str | None = None) -> dict:
         "models_path": models_path,
         "logs_path": logs_path,
         "metadata_path": metadata_path,
+        "scratch_path": scratch_path,
     }
 
 

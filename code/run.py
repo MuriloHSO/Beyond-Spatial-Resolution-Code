@@ -430,6 +430,8 @@ def main(argv=None):
         paths["figures_path"].mkdir(parents=True, exist_ok=True)
         (paths["maps_path"] / "PNG").mkdir(parents=True, exist_ok=True)
         (paths["maps_path"] / "TIFF").mkdir(parents=True, exist_ok=True)
+        if Path("/scratch").exists():  # Code Ocean's temporary folder
+            paths["scratch_path"] = Path("/scratch")
 
     # Ensure imagery is available only if any experiment requires image classification
     if any_img:

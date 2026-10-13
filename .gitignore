@@ -1,5 +1,6 @@
 /data/
 __pycache__/
+scratch/
 
 # Claude Code (local only)
 CLAUDE.md

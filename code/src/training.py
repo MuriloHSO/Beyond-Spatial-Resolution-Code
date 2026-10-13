@@ -20,6 +20,9 @@ from matplotlib import colors
 
 from .tuning import tune_model
 
+# Breakdown of the training time, kept out of results/ (written to scratch/ by the dispatcher).
+INTERNAL_COLUMNS = ["Tuning Time (s)", "Final Fit Time (s)", "Tuning CV OA"]
+
 
 def train_and_evaluate_model(
     X_train,
@@ -161,6 +164,11 @@ def train_and_evaluate_model(
         )
         kappa_std = round(float(np.std(cv_kappa_scores)), 6)
 
+        # Timed fits and predictions use all CPU threads where the estimator supports it
+        # (after the search and the CV above, which already run in parallel).
+        if "n_jobs" in model.get_params():
+            model.set_params(n_jobs=-1)
+
         # Training
         training_times = []
         for _ in range(3):
@@ -214,15 +222,17 @@ def train_and_evaluate_model(
                 accuracy_std,
                 kappa,
                 kappa_std,
-                round(training_time, 6),
+                # TT = time to obtain a trained model: hyperparameter search (once) + final fit (mean of 3)
+                round(training_time + (tuning_time if best_params else 0.0), 6),
                 training_time_std,
                 round(validation_time, 6),
                 validation_time_std,
                 round(classification_time, 6) if apply_model_on_image else np.nan,
                 classification_time_std,
-                round(tuning_time, 6),
-                round(tuning_score, 6),
                 _format_params(best_params),
+                round(tuning_time, 6),
+                round(training_time, 6),
+                round(tuning_score, 6),
             ]
         )
 
@@ -266,9 +276,8 @@ def train_and_evaluate_model(
             "Validation Time Std (s)",
             "Classification Time (s)",
             "Classification Time Std (s)",
-            "Tuning Time (s)",
-            "Tuning CV OA",
             "Best Params",
+            *INTERNAL_COLUMNS,
         ],
     )
 

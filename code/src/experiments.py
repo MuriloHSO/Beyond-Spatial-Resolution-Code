@@ -5,7 +5,7 @@ Experiment definitions and the dispatcher that runs them.
 """
 
 import pandas as pd
-from .training import train_and_evaluate_model
+from .training import INTERNAL_COLUMNS, train_and_evaluate_model
 from .paths import get_image_lists
 from .tuning import spatial_blocks
 
@@ -68,7 +68,7 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
     )
 
     if save_csv:
-        results.to_csv(paths["results_path"] / "S2_4b.csv", index=False)
+        results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "S2_4b.csv", index=False)
 
     return params, results
 
@@ -90,7 +90,7 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
     )
 
     if save_csv:
-        results.to_csv(paths["results_path"] / "S2_Allb.csv", index=False)
+        results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "S2_Allb.csv", index=False)
 
     return params, results
 
@@ -112,7 +112,7 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
     )
 
     if save_csv:
-        results.to_csv(paths["results_path"] / "PS_4b.csv", index=False)
+        results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "PS_4b.csv", index=False)
 
     return params, results
 
@@ -134,7 +134,7 @@ def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, s
     )
 
     if save_csv:
-        results.to_csv(paths["results_path"] / "PS_Allb.csv", index=False)
+        results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "PS_Allb.csv", index=False)
 
     return params, results
 
@@ -222,7 +222,13 @@ def run_all_experiments(
         if selected_results
         else pd.DataFrame()
     )
-    combined.to_csv(paths["results_path"] / results_filename(tuning), index=False)
+    name = results_filename(tuning)
+    combined.drop(columns=INTERNAL_COLUMNS, errors="ignore").to_csv(paths["results_path"] / name, index=False)
+    # Breakdown of the training time (search, final fit, inner-CV OA): internal, not part of results/.
+    if not combined.empty:
+        combined[["Imagery", "Models", *INTERNAL_COLUMNS]].to_csv(
+            paths["scratch_path"] / name.replace("model_results", "time_breakdown"), index=False
+        )
     return combined
 
 
