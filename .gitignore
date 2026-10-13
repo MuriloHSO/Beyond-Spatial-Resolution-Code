@@ -1,2 +1,7 @@
 /data/
 __pycache__/
+
+# Claude Code (local only)
+CLAUDE.md
+claude/
+.claude/
