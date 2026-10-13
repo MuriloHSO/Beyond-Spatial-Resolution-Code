@@ -5,7 +5,8 @@
 # Then simply execute:  python run.py
 # =============================================================================
 
-# Random seed used by all classifiers that accept a random_state argument.
+# Single random seed for every source of randomness: classifiers, cross-validation
+# splits and the hyperparameter search (fixed for reproducibility).
 random_state = 2025
 
 # -----------------------------------------------------------------------------

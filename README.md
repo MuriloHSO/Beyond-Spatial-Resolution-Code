@@ -50,7 +50,7 @@ All user-facing settings live in [`code/config.toml`](code/config.toml):
 
 | Key | Description |
 |-----|-------------|
-| `random_state` | Integer seed for all classifiers |
+| `random_state` | Single integer seed for the classifiers, cross-validation splits and hyperparameter search (default 2025) |
 | `models` | List of models to run (empty list = all seven) |
 | `skip_plots` | Set to `true` to skip figure generation |
 | `apply_model_on_image` | `true` to classify the full satellite image in every experiment; `false` to skip (faster) |
@@ -68,6 +68,8 @@ Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`
 Every model is tuned with Successive Halving ([`HalvingRandomSearchCV`](https://scikit-learn.org/stable/modules/grid_search.html#successive-halving-user-guide)) before it is evaluated. For each model, `n_candidates` configurations are sampled from the search space in `src/tuning.py` and scored by stratified, spatially grouped cross-validation on a small subsample of the training set. Only the best `1/factor` of them advance to the next round, which uses `factor` times more samples, until the remaining configurations are scored on the full training set. The highest-scoring configuration (by overall accuracy) is then trained and evaluated as before.
 
 Training points are only a few metres apart, so neighbouring points often fall in the same pixel. With random folds, these near-duplicates end up on both sides of a split and the search favours configurations that memorise them. The inner folds are therefore built from square spatial blocks of `block_size` metres (1 km by default): all points in a block stay in the same fold.
+
+MLP and LinearSVC use a larger maximum number of iterations than the scikit-learn defaults (`max_iter` 1000 and 10,000, set in `src/config.py`): with the defaults (200 and 1000), MLP stopped before converging in some image sets and LinearSVC results varied with the random seed.
 
 Tuning uses only the training set; the validation set is never seen during the search. Standardisation is fit inside each inner fold to avoid leakage. Tuned results are saved to `model_results_tuned.csv`, so `model_results.csv` keeps the default-hyperparameter results. In the tuned results, `Training Time (s)` is the time to obtain a trained model: the hyperparameter search plus the final fit (mean of 3 fits), and `Best Params` lists the selected hyperparameters. All times are elapsed times with every CPU thread available: the search runs its candidates in parallel, and the final model uses all threads where the estimator supports it (`n_jobs`). The breakdown of the training time (search, final fit and inner-CV OA) is written to `scratch/time_breakdown_tuned.csv`, outside `results/`.
 

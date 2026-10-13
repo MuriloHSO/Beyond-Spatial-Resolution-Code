@@ -23,7 +23,8 @@ Options
 -------
     --config PATH               Path to a TOML config file
                                 (default: config.toml next to this script)
-    --random-state INT          Random seed for classifiers
+    --random-state INT          Random seed for the classifiers, CV splits and
+                                hyperparameter search
     --models MODEL [MODEL ...]  Models to run; omit to use config.toml value.
                                 Valid: CART KNN MLP RF SGDC LinearSVC SVC_rbf
     --experiments EXP [EXP ...] Experiments to run; omit to use config.toml.
@@ -107,7 +108,7 @@ ALL_MODELS = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVC_rbf"]
 ALL_EXPERIMENTS = ["S2_4b", "S2_Allb", "PS_4b", "PS_Allb"]
 
 # Fallback defaults (used when config.toml is missing and no CLI flag is given)
-_FALLBACK_RANDOM_STATE = 2025
+_FALLBACK_RANDOM_STATE = 2025  # same as src.config.DEFAULT_RANDOM_STATE
 _FALLBACK_MODELS: list = []          # empty → all models
 _FALLBACK_TUNING = {
     "enabled": True,
@@ -139,7 +140,7 @@ def parse_args(argv=None):
     )
     parser.add_argument(
         "--random-state", type=int, default=None,
-        help="Random seed for all classifiers.",
+        help="Random seed for the classifiers, CV splits and hyperparameter search.",
     )
     parser.add_argument(
         "--models", nargs="+", choices=ALL_MODELS, default=None,

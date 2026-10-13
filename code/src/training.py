@@ -18,6 +18,7 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.preprocessing import StandardScaler
 from matplotlib import colors
 
+from .config import DEFAULT_RANDOM_STATE
 from .tuning import tune_model
 
 # Breakdown of the training time, kept out of results/ (written to scratch/ by the dispatcher).
@@ -35,7 +36,7 @@ def train_and_evaluate_model(
     apply_model_on_image: bool = True,
     condition_label=None,
     tuning: dict = None,
-    random_state: int = 2025,
+    random_state: int = DEFAULT_RANDOM_STATE,
     groups=None,
 ) -> tuple:
     """
@@ -62,7 +63,7 @@ def train_and_evaluate_model(
         ``None`` or ``tuning["enabled"]`` is ``False``, the default
         hyperparameters are used.
     random_state : int
-        Seed for the hyperparameter search.
+        Seed for the hyperparameter search and the 10-fold CV split.
     groups : array-like, optional
         Spatial block of each training point, used to split the tuning folds.
 
@@ -75,7 +76,7 @@ def train_and_evaluate_model(
     X_test_norm = scaler.transform(X_test)
 
     # K-Fold setup for robust variability estimates
-    kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=2025)
+    kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=random_state)
     kappa_scorer = make_scorer(cohen_kappa_score)
 
     filename = Path(imagery).stem if imagery is not None else "dataset"
@@ -229,7 +230,7 @@ def train_and_evaluate_model(
                 validation_time_std,
                 round(classification_time, 6) if apply_model_on_image else np.nan,
                 classification_time_std,
-                _format_params(best_params),
+                _format_params(best_params, full_precision=True),
                 round(tuning_time, 6),
                 round(training_time, 6),
                 round(tuning_score, 6),
@@ -284,12 +285,16 @@ def train_and_evaluate_model(
     return params, results_df
 
 
-def _format_params(params: dict) -> str:
-    """Readable ``key=value`` string with floats rounded to 4 significant digits."""
+def _format_params(params: dict, full_precision: bool = False) -> str:
+    """``key=value`` string of hyperparameters.
+
+    Floats are rounded to 4 significant digits for display (log), or written at full precision
+    (shortest repr that round-trips exactly) for the results CSV, so models can be refitted exactly.
+    """
     parts = []
     for key, value in sorted(params.items()):
         if isinstance(value, (float, np.floating)):
-            value = f"{value:.4g}"
+            value = repr(float(value)) if full_precision else f"{value:.4g}"
         elif isinstance(value, np.integer):
             value = int(value)
         parts.append(f"{key}={value}")

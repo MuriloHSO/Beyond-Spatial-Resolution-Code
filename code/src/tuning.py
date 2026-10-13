@@ -25,6 +25,8 @@ from sklearn.model_selection import HalvingRandomSearchCV, StratifiedGroupKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from .config import DEFAULT_RANDOM_STATE
+
 
 # ---------------------------------------------------------------------------
 # Search spaces
@@ -84,7 +86,7 @@ def spatial_blocks(df, block_size: float):
     return (col + "_" + row).to_numpy()
 
 
-def tune_model(model_name, model, X_train, y_train, groups, tuning: dict, random_state: int = 2025):
+def tune_model(model_name, model, X_train, y_train, groups, tuning: dict, random_state: int = DEFAULT_RANDOM_STATE):
     """
     Search the hyperparameters of *model* with Successive Halving.
 

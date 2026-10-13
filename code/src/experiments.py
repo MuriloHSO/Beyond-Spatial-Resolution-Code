@@ -5,6 +5,7 @@ Experiment definitions and the dispatcher that runs them.
 """
 
 import pandas as pd
+from .config import DEFAULT_RANDOM_STATE
 from .training import INTERNAL_COLUMNS, train_and_evaluate_model
 from .paths import get_image_lists
 from .tuning import spatial_blocks
@@ -52,7 +53,7 @@ def _get_imagery(paths, sensor):
 # ---------------------------------------------------------------------------
 
 def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, save_csv=True,
-                         tuning=None, random_state=2025):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE):
     X,  y  = datasets["df_s2train"][S2_BANDS_4], datasets["df_s2train"]["Class"]
     groups = _tuning_groups(datasets["df_s2train"], tuning)
     X2, y2 = datasets["df_s2val"][S2_BANDS_4],   datasets["df_s2val"]["Class"]
@@ -74,7 +75,7 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
 
 
 def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
-                         tuning=None, random_state=2025):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE):
     X,  y  = datasets["df_s2train"][S2_BANDS_ALL], datasets["df_s2train"]["Class"]
     groups = _tuning_groups(datasets["df_s2train"], tuning)
     X2, y2 = datasets["df_s2val"][S2_BANDS_ALL],   datasets["df_s2val"]["Class"]
@@ -96,7 +97,7 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
 
 
 def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, save_csv=True,
-                         tuning=None, random_state=2025):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE):
     X,  y  = datasets["df_psstrain"][PS_BANDS_4], datasets["df_psstrain"]["Class"]
     groups = _tuning_groups(datasets["df_psstrain"], tuning)
     X2, y2 = datasets["df_pssval"][PS_BANDS_4],   datasets["df_pssval"]["Class"]
@@ -118,7 +119,7 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
 
 
 def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
-                         tuning=None, random_state=2025):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE):
     X,  y  = datasets["df_psstrain"][PS_BANDS_ALL], datasets["df_psstrain"]["Class"]
     groups = _tuning_groups(datasets["df_psstrain"], tuning)
     X2, y2 = datasets["df_pssval"][PS_BANDS_ALL],   datasets["df_pssval"]["Class"]
@@ -161,7 +162,7 @@ def run_all_experiments(
     datasets: dict,
     paths: dict,
     tuning: dict = None,
-    random_state: int = 2025,
+    random_state: int = DEFAULT_RANDOM_STATE,
 ) -> pd.DataFrame:
     """
     Run a list of experiments and return the combined results DataFrame.
@@ -183,7 +184,7 @@ def run_all_experiments(
         Tuned results are saved to ``model_results_tuned.csv`` so the
         default-hyperparameter results are not overwritten.
     random_state : int
-        Seed for the hyperparameter search.
+        Seed for the classifiers' CV splits and the hyperparameter search.
 
     Returns
     -------
