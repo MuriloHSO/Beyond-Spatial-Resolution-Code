@@ -18,11 +18,14 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
     - `plotting.py` — all figure-generation functions
 
 `data/` - input data directory (mirrors Code Ocean's `/data`):
-- CSV training and validation datasets (included in the repository)
+- CSV training and validation datasets (included in the repository). The `Class` column holds the class code of each point; the task is a single three-class problem (plastic-mulched farmland, plastic greenhouses and others) solved by one multiclass model per experiment.
 - `Imagery/` — must contain the GeoTIFF imagery downloaded from [Hugging Face](https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code) (not included)
 
 `results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
 - Classification maps (PNG and TIFF), metric tables, and figures
+- `model_results_tuned.csv` — OA, Cohen's kappa, macro F1, training time (TT), image inference speed (IS) and selected hyperparameters of every model
+- `class_metrics_tuned.csv` — per-class precision, recall, F1 and support on the validation set
+- `confusion_matrices_tuned.csv` — confusion matrix of every model on the validation set (long format: true class, predicted class, count); `figures/Fig_B.7_confusion_matrices.png` shows those of the most accurate classifier of each experiment
 
 `scratch/` - temporary and internal files, not part of the results (git-ignored), e.g. the breakdown of the training time (`time_breakdown_tuned.csv`).
 

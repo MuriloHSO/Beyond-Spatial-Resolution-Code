@@ -944,3 +944,68 @@ def plot_scatter_combined(plot_data, results_path):
     fig2.savefig(results_path / f"{output_name_scatter}.png", dpi=400, bbox_inches="tight", pad_inches=0.02)
     plt.show()
     #print(f"Figure: {output_name_scatter}.png")
+
+
+# ---------------------------------------------------------------------------
+# Confusion matrices
+# ---------------------------------------------------------------------------
+
+IMAGE_SET_TITLES = {
+    "S2_1": "S2 (4 bands)",
+    "S2_2": "S2 (10 bands)",
+    "PS_1": "PS (4 bands)",
+    "PS_2": "PS (8 bands)",
+}
+
+
+def plot_confusion_matrices(results_file, confusion_file, results_path, class_names=None):
+    """
+    Confusion matrices on the validation set of the most accurate classifier (highest OA)
+    of each image set, one panel per image set.  Cells show the share of each true class
+    (row-normalised, equal to the recall on the diagonal) and the number of points.
+    Saved to ``Fig_B.7_confusion_matrices.png``.
+    """
+    df_results = load_results_dataframe(results_file)
+    df_cm = load_results_dataframe(confusion_file)
+    labels = sorted(df_cm["True Class"].unique())
+    class_names = class_names or {}
+    tick_labels = [class_names.get(label, str(label)) for label in labels]
+
+    image_sets = [s for s in IMAGE_SET_TITLES if s in set(df_results["Imagery"])]
+    best = df_results.loc[df_results.groupby("Imagery")["OA"].idxmax(), ["Imagery", "Models", "OA"]]
+    best = best.set_index("Imagery")
+
+    n_cols = 2
+    n_rows = int(np.ceil(len(image_sets) / n_cols))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(9.0, 4.3 * n_rows), squeeze=False)
+
+    for ax, image_set in zip(axes.flat, image_sets):
+        model, oa = best.loc[image_set, "Models"], best.loc[image_set, "OA"]
+        sub = df_cm[(df_cm["Imagery"] == image_set) & (df_cm["Models"] == model)]
+        counts = (
+            sub.pivot(index="True Class", columns="Predicted Class", values="Count")
+            .reindex(index=labels, columns=labels)
+            .to_numpy()
+        )
+        shares = counts / counts.sum(axis=1, keepdims=True)
+
+        ax.imshow(shares, cmap="Blues", vmin=0, vmax=1)
+        for i in range(len(labels)):
+            for j in range(len(labels)):
+                color = "white" if shares[i, j] > 0.5 else "black"
+                ax.text(j, i, f"{shares[i, j]:.1%}\n({counts[i, j]})",
+                        ha="center", va="center", fontsize=10, color=color)
+        ax.set_xticks(range(len(labels)))
+        ax.set_yticks(range(len(labels)))
+        ax.set_xticklabels(tick_labels)
+        ax.set_yticklabels(tick_labels)
+        ax.set_xlabel("Predicted class")
+        ax.set_ylabel("True class")
+        ax.set_title(f"{IMAGE_SET_TITLES[image_set]}: {normalize_model_name(model)} (OA = {oa:.3f})", fontsize=11)
+
+    for ax in axes.flat[len(image_sets):]:
+        ax.axis("off")
+
+    fig.tight_layout()
+    fig.savefig(results_path / "Fig_B.7_confusion_matrices.png", dpi=400, bbox_inches="tight", pad_inches=0.02)
+    plt.close(fig)

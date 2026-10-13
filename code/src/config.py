@@ -17,6 +17,10 @@ from sklearn.tree import DecisionTreeClassifier
 # Single seed for every source of randomness: classifiers, CV splits and the hyperparameter search.
 DEFAULT_RANDOM_STATE = 2025
 
+# Names of the three classes coded in the "Class" column of the datasets (used in figure labels).
+# TODO: confirm which code is PMF, PGH and other.
+CLASS_NAMES = {0: "Class 0", 1: "Class 1", 2: "Class 2"}
+
 
 def build_models(random_state: int = DEFAULT_RANDOM_STATE, enabled: list = None) -> dict:
     """

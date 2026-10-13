@@ -59,7 +59,7 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
     X2, y2 = datasets["df_s2val"][S2_BANDS_4],   datasets["df_s2val"]["Class"]
 
     imagery = _get_imagery(paths, "S2")
-    params, results = train_and_evaluate_model(
+    params, results, class_metrics, confusion = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="S2_1",
@@ -71,7 +71,7 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
     if save_csv:
         results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "S2_4b.csv", index=False)
 
-    return params, results
+    return params, results, class_metrics, confusion
 
 
 def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
@@ -81,7 +81,7 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
     X2, y2 = datasets["df_s2val"][S2_BANDS_ALL],   datasets["df_s2val"]["Class"]
 
     imagery = _get_imagery(paths, "S2")
-    params, results = train_and_evaluate_model(
+    params, results, class_metrics, confusion = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="S2_2",
@@ -93,7 +93,7 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
     if save_csv:
         results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "S2_Allb.csv", index=False)
 
-    return params, results
+    return params, results, class_metrics, confusion
 
 
 def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, save_csv=True,
@@ -103,7 +103,7 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
     X2, y2 = datasets["df_pssval"][PS_BANDS_4],   datasets["df_pssval"]["Class"]
 
     imagery = _get_imagery(paths, "PS")
-    params, results = train_and_evaluate_model(
+    params, results, class_metrics, confusion = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="PS_1",
@@ -115,7 +115,7 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
     if save_csv:
         results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "PS_4b.csv", index=False)
 
-    return params, results
+    return params, results, class_metrics, confusion
 
 
 def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
@@ -125,7 +125,7 @@ def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, s
     X2, y2 = datasets["df_pssval"][PS_BANDS_ALL],   datasets["df_pssval"]["Class"]
 
     imagery = _get_imagery(paths, "PS")
-    params, results = train_and_evaluate_model(
+    params, results, class_metrics, confusion = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="PS_2",
@@ -137,7 +137,7 @@ def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, s
     if save_csv:
         results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "PS_Allb.csv", index=False)
 
-    return params, results
+    return params, results, class_metrics, confusion
 
 
 # ---------------------------------------------------------------------------
@@ -190,9 +190,13 @@ def run_all_experiments(
     -------
     pd.DataFrame
         Concatenated results from all experiments, also saved to
-        ``results_path/model_results.csv`` (or ``model_results_tuned.csv``).
+        ``results_path/model_results.csv`` (or ``model_results_tuned.csv``).  The per-class
+        metrics and confusion matrices are saved next to it as ``class_metrics*.csv`` and
+        ``confusion_matrices*.csv``.
     """
     selected_results = []
+    selected_class_metrics = []
+    selected_confusion = []
     n_exps = len(selected_experiments)
 
     for exp_i, item in enumerate(selected_experiments, 1):
@@ -207,7 +211,7 @@ def run_all_experiments(
         img_note = "  [+image]" if apply_flag else ""
         print(f"\n  + [{exp_i}/{n_exps}] {name}{img_note}")
 
-        _params, results_i = EXPERIMENT_QUEUE[name](
+        _params, results_i, class_metrics_i, confusion_i = EXPERIMENT_QUEUE[name](
             models=models,
             datasets=datasets,
             paths=paths,
@@ -217,6 +221,8 @@ def run_all_experiments(
             random_state=random_state,
         )
         selected_results.append(results_i)
+        selected_class_metrics.append(class_metrics_i)
+        selected_confusion.append(confusion_i)
 
     combined = (
         pd.concat(selected_results, ignore_index=True)
@@ -225,6 +231,14 @@ def run_all_experiments(
     )
     name = results_filename(tuning)
     combined.drop(columns=INTERNAL_COLUMNS, errors="ignore").to_csv(paths["results_path"] / name, index=False)
+    # Per-class metrics and confusion matrices on the validation set.
+    if selected_results:
+        pd.concat(selected_class_metrics, ignore_index=True).to_csv(
+            paths["results_path"] / name.replace("model_results", "class_metrics"), index=False
+        )
+        pd.concat(selected_confusion, ignore_index=True).to_csv(
+            paths["results_path"] / name.replace("model_results", "confusion_matrices"), index=False
+        )
     # Breakdown of the training time (search, final fit, inner-CV OA): internal, not part of results/.
     if not combined.empty:
         combined[["Imagery", "Models", *INTERNAL_COLUMNS]].to_csv(

@@ -13,7 +13,13 @@ import numpy as np
 import pandas as pd
 import rasterio
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import accuracy_score, cohen_kappa_score, make_scorer
+from sklearn.metrics import (
+    accuracy_score,
+    cohen_kappa_score,
+    confusion_matrix,
+    make_scorer,
+    precision_recall_fscore_support,
+)
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.preprocessing import StandardScaler
 from matplotlib import colors
@@ -69,7 +75,10 @@ def train_and_evaluate_model(
 
     Returns
     -------
-    (params, results_df)
+    (params, results_df, class_metrics_df, confusion_df)
+        ``class_metrics_df`` has the per-class precision, recall, F1 and support on the
+        validation set; ``confusion_df`` has the confusion matrix in long format
+        (true class, predicted class, count).
     """
     scaler = StandardScaler()
     X_train_norm = scaler.fit_transform(X_train)
@@ -145,6 +154,9 @@ def train_and_evaluate_model(
     # Train and evaluate models
     params = []
     results = []
+    class_rows = []
+    confusion_rows = []
+    labels = np.unique(y_train)
     n_models = len(models)
     for model_idx, (model_name, model) in enumerate(models.items(), 1):
         # Hyperparameter tuning (training set only)
@@ -201,6 +213,16 @@ def train_and_evaluate_model(
         # Metrics
         accuracy = round(accuracy_score(y_test, y_pred), 6)
         kappa = round(cohen_kappa_score(y_test, y_pred), 6)
+        precision, recall, f1, support = precision_recall_fscore_support(
+            y_test, y_pred, labels=labels, zero_division=0
+        )
+        macro_f1 = round(float(np.mean(f1)), 6)
+        for label, p, r, f, s in zip(labels, precision, recall, f1, support):
+            class_rows.append([name, model_name, label, round(p, 6), round(r, 6), round(f, 6), int(s)])
+        cm = confusion_matrix(y_test, y_pred, labels=labels)
+        for i, true_label in enumerate(labels):
+            for j, pred_label in enumerate(labels):
+                confusion_rows.append([name, model_name, true_label, pred_label, int(cm[i, j])])
         bullet  = "\\-" if model_idx == n_models else "+-"
         img_str = f"{classification_time:.3f}s" if apply_model_on_image else "-"
         tune_str = f"  tune {tuning_time:.1f}s" if best_params else ""
@@ -223,6 +245,7 @@ def train_and_evaluate_model(
                 accuracy_std,
                 kappa,
                 kappa_std,
+                macro_f1,
                 # TT = time to obtain a trained model: hyperparameter search (once) + final fit (mean of 3)
                 round(training_time + (tuning_time if best_params else 0.0), 6),
                 training_time_std,
@@ -271,6 +294,7 @@ def train_and_evaluate_model(
             "OA Std (KFold)",
             "Kappa",
             "Kappa Std (KFold)",
+            "Macro F1",
             "Training Time (s)",
             "Training Time Std (s)",
             "Validation Time (s)",
@@ -282,7 +306,14 @@ def train_and_evaluate_model(
         ],
     )
 
-    return params, results_df
+    class_metrics_df = pd.DataFrame(
+        class_rows, columns=["Imagery", "Models", "Class", "Precision", "Recall", "F1", "Support"]
+    )
+    confusion_df = pd.DataFrame(
+        confusion_rows, columns=["Imagery", "Models", "True Class", "Predicted Class", "Count"]
+    )
+
+    return params, results_df, class_metrics_df, confusion_df
 
 
 def _format_params(params: dict, full_precision: bool = False) -> str:

@@ -392,7 +392,7 @@ def main(argv=None):
     if str(base) not in sys.path:
         sys.path.insert(0, str(base))
 
-    from src.config import build_models
+    from src.config import CLASS_NAMES, build_models
     from src.paths import setup_paths
     from src.download import ensure_imagery
     from src.data import load_datasets
@@ -404,6 +404,7 @@ def main(argv=None):
         plot_satellite_impact,
         plot_band_impact,
         plot_scatter_combined,
+        plot_confusion_matrices,
     )
 
     paths = setup_paths(base=base)
@@ -444,6 +445,7 @@ def main(argv=None):
     )
     print(f"\n    [OK] All experiments complete.")
     RESULTS_FILE = paths["results_path"] / results_filename(tuning)
+    CONFUSION_FILE = paths["results_path"] / results_filename(tuning).replace("model_results", "confusion_matrices")
     print(f"      Results -> {RESULTS_FILE}")
 
     # -- Step 3 (optional): Generate figures ---------------------
@@ -468,6 +470,9 @@ def main(argv=None):
         ("Fig_B.2_Satellite impact", lambda: plot_satellite_impact(RESULTS_FILE, paths["figures_path"])),
         ("Fig_B.3_Band impact",      lambda: plot_band_impact(RESULTS_FILE,      paths["figures_path"])),
         ("Fig_B.4_OA/Kappa bars",    lambda: plot_oa_kappa_bars(RESULTS_FILE,   paths["figures_path"])),
+        ("Fig_B.7_Confusion matrices", lambda: plot_confusion_matrices(
+                                 RESULTS_FILE, CONFUSION_FILE, paths["figures_path"], CLASS_NAMES,
+                             )),
     ]
 
     _saved, _skipped = [], []
