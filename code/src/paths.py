@@ -43,6 +43,21 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
     PS_imagery = images_path / "PS"
 
+    # Data generation (complete run): raw scenes, reference polygons and composites
+    raw_path = data_path / "raw"
+
+    PS_raw = raw_path / "PlanetScope"
+
+    S2_raw = raw_path / "Sentinel-2"
+
+    polygons_path = data_path / "polygons"
+
+    composites_path = data_path / "composites"
+
+    PS_composites = composites_path / "PlanetScope"
+
+    S2_composites = composites_path / "Sentinel-2"
+
     # ------------------------------------------------------------------
     # Outputs
     # ------------------------------------------------------------------
@@ -99,6 +114,14 @@ def setup_paths(base: Path | str | None = None) -> dict:
         "images_path": images_path,
         "S2_imagery": S2_imagery,
         "PS_imagery": PS_imagery,
+
+        "raw_path": raw_path,
+        "PS_raw": PS_raw,
+        "S2_raw": S2_raw,
+        "polygons_path": polygons_path,
+        "composites_path": composites_path,
+        "PS_composites": PS_composites,
+        "S2_composites": S2_composites,
 
         "results_path": results_path,
         "figures_path": figures_path,

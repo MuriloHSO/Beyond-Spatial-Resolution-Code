@@ -6,3 +6,17 @@ scratch/
 CLAUDE.md
 claude/
 .claude/
+
+# Ignore local environment files
+.env
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore VS Code settings
+.vscode/
+
+# Ignore Hugging Face cache
+cache/
+data\.cache\huggingface
+

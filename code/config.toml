@@ -72,3 +72,45 @@ n_candidates = 81
 factor = 3
 cv_folds = 5
 block_size = 1000
+
+# -----------------------------------------------------------------------------
+# Data generation (complete run only; off by default)
+#
+# preprocess        : build the 3-time-series composites (30-day mean per
+#                     window) of PS and S2 from the raw scenes in data/raw/
+#                     (src/preprocessing.py). S2 scenes are downloaded from
+#                     Google Earth Engine if missing (src/download_s2_gee.py).
+# generate_points   : draw the training/validation points from the reference
+#                     polygons and extract their values from the composites,
+#                     rewriting data/{PS,S2}_{Training,Validation}.csv
+#                     (src/generate_data_points.py).
+# first_year,
+# last_year         : reference dates are Jun-18 and Dec-15 of every year in
+#                     this range, the same for PS and S2.
+# windows           : start and end (exclusive) of each composite window, in
+#                     days from the reference date (t0, t1, t2).
+# training_points,
+# validation_points : points per class in each set.
+# Packages: requirements-data.txt.
+
+[data_generation]
+preprocess = false
+generate_points = false
+first_year = 2020
+last_year = 2022
+windows = [[-30, 0], [30, 60], [100, 130]]
+training_points = 12000
+validation_points = 4000
+
+# Sentinel-2 scene filter and s2cloudless cloud/shadow mask (computed in GEE).
+# cloud_filter                : maximum CLOUDY_PIXEL_PERCENTAGE of a scene (%).
+# cloud_probability_threshold : s2cloudless probability (%) above which a pixel is cloud.
+# nir_dark_threshold          : NIR reflectance below which a pixel may be cloud shadow.
+# cloud_projection_distance   : maximum distance (km) to search for shadows from clouds.
+# buffer                      : dilation (m) of the cloud/shadow mask.
+[data_generation.sentinel2]
+cloud_filter = 50
+cloud_probability_threshold = 60
+nir_dark_threshold = 0.15
+cloud_projection_distance = 2
+buffer = 100

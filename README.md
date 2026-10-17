@@ -11,7 +11,10 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
     - `config.py` — builds the classifiers dictionary
     - `paths.py` — filesystem paths and output directory creation
     - `data.py` — CSV dataset loading
-    - `download.py` — download image dataset from Hugging Face
+    - `download.py` — download the image dataset from Hugging Face (pinned dataset revision)
+    - `preprocessing.py` — 3-time-series composites (30-day means) of PS and S2 from raw scenes (complete run)
+    - `download_s2_gee.py` — S2 scenes with the s2cloudless cloud/shadow mask from Google Earth Engine (complete run)
+    - `generate_data_points.py` — training/validation points from the reference polygons (complete run)
     - `training.py` — `train_and_evaluate_model` function
     - `tuning.py` — hyperparameter search spaces and Successive Halving tuning
     - `experiments.py` — per-experiment runners and dispatcher
@@ -19,7 +22,7 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 
 `data/` - input data directory (mirrors Code Ocean's `/data`):
 - CSV training and validation datasets (included in the repository). The `Class` column holds the class code of each point; the task is a single three-class problem (plastic-mulched farmland, plastic greenhouses and others) solved by one multiclass model per experiment.
-- `Imagery/` — must contain the GeoTIFF imagery downloaded from [Hugging Face](https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code) (not included)
+- `Imagery/` — GeoTIFF imagery from [Hugging Face](https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code) (not included; about 8.4 GB). `run.py` downloads it when full-image classification is enabled; to download it alone, run `python -m src.download` from the `code` folder.
 
 `results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
 - Classification maps (PNG and TIFF), metric tables, and figures
@@ -64,9 +67,24 @@ All user-facing settings live in [`code/config.toml`](code/config.toml):
 | `[tuning] factor` | Successive Halving elimination rate between rounds |
 | `[tuning] cv_folds` | Inner stratified CV folds used to score each configuration |
 | `[tuning] block_size` | Side (m) of the square spatial blocks used to build the inner CV folds |
+| `[data_generation] preprocess` | `true` to build the composites from the raw scenes (also `--preprocess`; default `false`) |
+| `[data_generation] generate_points` | `true` to regenerate the four CSVs from the polygons and composites (also `--generate-points`; default `false`) |
+| `[data_generation] first_year`, `last_year` | Reference dates are Jun-18 and Dec-15 of every year in this range |
+| `[data_generation] windows` | Start and end (exclusive) of the t0, t1, t2 windows, in days from the reference date |
+| `[data_generation] training_points`, `validation_points` | Points per class in each set |
+| `[data_generation.sentinel2]` | S2 scene cloud filter and s2cloudless mask parameters |
 
 Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGDC`, `LinearSVC`, `SVC_rbf`  
 Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`
+
+## Data generation (complete run)
+The CSVs in `data/` can be rebuilt from raw scenes and reference polygons. These steps are off by default and need the packages in `code/requirements-data.txt`:
+
+1. Place the reference polygons (`polygons/*.gpkg` of the Hugging Face dataset) in `data/polygons/`.
+2. Place the 8-band PlanetScope surface reflectance scenes (`*_AnalyticMS_SR_8b*.tif`, ordered from Planet) anywhere under `data/raw/PlanetScope/`. The file name must start with the acquisition date (`YYYYMMDD`), as in Planet's naming.
+3. Run `python run.py --preprocess --generate-points` from `code/` (or set the switches in `config.toml`). A reference date is used when every window of every ROI has PlanetScope scenes. Missing Sentinel-2 scenes are downloaded from Google Earth Engine after confirmation (`python -m src.download_s2_gee` does it alone); this needs an Earth Engine account, with the Cloud project id in the `EE_PROJECT` environment variable or typed when asked.
+
+Composites are written to `data/composites/` and the four CSVs in `data/` are replaced; they gain a `Reference_Date` column. Each CSV row is a random point inside one 10 m S2 pixel (one point per pixel and reference date) whose values come from the S2 pixel and from the 3 m PS pixel at the point.
 
 ## Hyperparameter tuning
 Every model is tuned with Successive Halving ([`HalvingRandomSearchCV`](https://scikit-learn.org/stable/modules/grid_search.html#successive-halving-user-guide)) before it is evaluated. For each model, `n_candidates` configurations are sampled from the search space in `src/tuning.py` and scored by stratified, spatially grouped cross-validation on a small subsample of the training set. Only the best `1/factor` of them advance to the next round, which uses `factor` times more samples, until the remaining configurations are scored on the full training set. The highest-scoring configuration (by overall accuracy) is then trained and evaluated as before.

@@ -36,6 +36,10 @@ Options
     --skip-plots                Do not generate figures after the experiments.
     --no-tuning                 Use default hyperparameters (skip the
                                 Successive Halving search in config.toml)
+    --preprocess                Build the PS and S2 composites from the raw
+                                scenes in data/raw/ (complete run)
+    --generate-points           Regenerate the training/validation CSVs from
+                                the polygons and composites (complete run)
 """
 
 import os
@@ -44,11 +48,11 @@ import sys
 from pathlib import Path
 
 
-def check_requirements():
-    """Compare installed package versions with the pins in requirements.txt; install only if they differ."""
+def check_requirements(filename="requirements.txt"):
+    """Compare installed package versions with the pins in *filename*; install only if they differ."""
     from importlib.metadata import PackageNotFoundError, version
 
-    req_file = Path(__file__).parent / "requirements.txt"
+    req_file = Path(__file__).parent / filename
     if not req_file.exists():
         return
 
@@ -67,7 +71,7 @@ def check_requirements():
                 mismatches.append(f"{name} (installed {installed}, required {pinned})")
 
     if mismatches:
-        print("Packages differ from requirements.txt:\n  " + "\n  ".join(mismatches))
+        print(f"Packages differ from {filename}:\n  " + "\n  ".join(mismatches))
         print("Installing the required versions...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", str(req_file)])
         print("Dependencies installed successfully.\n")
@@ -170,6 +174,14 @@ def parse_args(argv=None):
         "--no-tuning", action="store_true", default=False,
         help="Use default hyperparameters instead of the Successive Halving search.",
     )
+    parser.add_argument(
+        "--preprocess", action="store_true", default=False,
+        help="Build the PS and S2 composites from the raw scenes in data/raw/ (complete run).",
+    )
+    parser.add_argument(
+        "--generate-points", action="store_true", default=False,
+        help="Regenerate data/{PS,S2}_{Training,Validation}.csv from the polygons and composites (complete run).",
+    )
 
     return parser.parse_args(argv)
 
@@ -234,12 +246,18 @@ def resolve_config(args) -> dict:
     if args.no_tuning:
         tuning["enabled"] = False
 
+    # --- data generation (complete run only) ---
+    data_generation = dict(toml.get("data_generation", {}))
+    data_generation["preprocess"] = args.preprocess or data_generation.get("preprocess", False)
+    data_generation["generate_points"] = args.generate_points or data_generation.get("generate_points", False)
+
     return {
         "random_state": random_state,
         "enabled_models": enabled_models,
         "selected_experiments": selected_experiments,
         "skip_plots": skip_plots,
         "tuning": tuning,
+        "data_generation": data_generation,
     }
 
 
@@ -360,10 +378,18 @@ def main(argv=None):
     else:
         print("  Tuning        : disabled (default hyperparameters)")
     print(f"  Figures       : {'skipped' if cfg['skip_plots'] else 'enabled'}")
+    data_generation = cfg["data_generation"]
+    data_steps = [
+        step for step, key in (("Build composites from raw scenes", "preprocess"),
+                               ("Generate data points", "generate_points"))
+        if data_generation[key]
+    ]
+    print(f"  Data generation: {', '.join(data_steps) if data_steps else 'disabled (data/*.csv used as is)'}")
     print()
 
     # Build step plan
     plan_steps = [
+        *data_steps,
         "Load datasets",
         f"Run experiments  ({len(exp_list)} exp × {len(model_names)} model(s)"
         + ("  [+tuning]" if tuning["enabled"] else "")
@@ -427,14 +453,38 @@ def main(argv=None):
     else:
         print("[OK] Full-image classification disabled. Skipping imagery download.")
 
-    # -- Step 1: Load datasets ----------------------------------
-    print(f"\n[1/{total_steps}] Loading datasets...")
+    step = 0
+
+    # -- Optional steps: data generation (complete run) -----------
+    if data_steps:
+        check_requirements("requirements-data.txt")
+        from src.preprocessing import settings
+        data_settings = settings(data_generation)
+    if data_generation["preprocess"]:
+        from src.preprocessing import build_all
+        step += 1
+        print(f"\n[{step}/{total_steps}] Building composites...")
+        report = build_all(paths, data_settings)
+        report.to_csv(paths["scratch_path"] / "preprocessing_report.csv", index=False)
+        print("    [OK] Composites built (report -> preprocessing_report.csv in scratch).")
+    if data_generation["generate_points"]:
+        from src.generate_data_points import generate
+        step += 1
+        print(f"\n[{step}/{total_steps}] Generating data points...")
+        summary = generate(paths, data_settings, cfg["random_state"])
+        summary.to_csv(paths["scratch_path"] / "data_points_summary.csv", index=False)
+        print("    [OK] Data points written (summary -> data_points_summary.csv in scratch).")
+
+    # -- Step: Load datasets -------------------------------------
+    step += 1
+    print(f"\n[{step}/{total_steps}] Loading datasets...")
     datasets = load_datasets(paths)
     sample_counts(datasets).to_csv(paths["results_path"] / "sample_counts.csv", index=False)
     print("    [OK] Datasets loaded (sample counts -> sample_counts.csv).\n")
 
-    # -- Step 2: Run experiments --------------------------------
-    print(f"[2/{total_steps}] Running experiments...")
+    # -- Step: Run experiments ----------------------------------
+    step += 1
+    print(f"[{step}/{total_steps}] Running experiments...")
     models  = build_models(cfg["random_state"], cfg["enabled_models"])
     results = run_all_experiments(
     cfg["selected_experiments"],
@@ -459,7 +509,8 @@ def main(argv=None):
         _print_all_done(paths["results_path"])
         return
 
-    print(f"\n[3/{total_steps}] Generating figures...")
+    step += 1
+    print(f"\n[{step}/{total_steps}] Generating figures...")
     plot_data = load_plot_data(RESULTS_FILE)
 
     _plot_calls = [
