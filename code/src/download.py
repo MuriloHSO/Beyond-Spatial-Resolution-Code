@@ -10,6 +10,7 @@ experiments:
     python -m src.download
 """
 
+import shutil
 from pathlib import Path
 
 from huggingface_hub import snapshot_download
@@ -87,6 +88,13 @@ def ensure_imagery(paths: dict, force_download: bool = False) -> None:
             "Imagery not found after download:\n"
             + "\n".join(str(path) for path in missing)
         )
+
+    # huggingface_hub keeps download metadata in <local_dir>/.cache/huggingface
+    # to resume interrupted downloads; it is not needed once every file is present.
+    hf_cache = paths["images_path"].parent / ".cache" / "huggingface"
+    shutil.rmtree(hf_cache, ignore_errors=True)
+    if hf_cache.parent.exists() and not any(hf_cache.parent.iterdir()):
+        hf_cache.parent.rmdir()
 
     images = get_image_lists(paths)
 
