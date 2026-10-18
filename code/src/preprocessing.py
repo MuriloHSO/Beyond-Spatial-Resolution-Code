@@ -72,7 +72,9 @@ DEFAULTS = {
     "training_points": 12000,
     "validation_points": 4000,
     "sentinel2": {
-        "cloud_filter": 50,
+        "cloud_filter": 20,
+        "cloud_filter_step": 10,
+        "min_full_coverage_days": 3,
         "cloud_probability_threshold": 60,
         "nir_dark_threshold": 0.15,
         "cloud_projection_distance": 2,
@@ -177,12 +179,12 @@ def find_ps_scenes(paths: dict) -> pd.DataFrame:
 
 
 def find_s2_scenes(paths: dict, roi: str) -> pd.DataFrame:
-    """S2 scenes downloaded for *roi* (already on the ROI grid)."""
+    """S2 scenes selected for *roi* (data/raw/Sentinel-2/scenes.csv) and downloaded (on the ROI grid)."""
+    manifest_path = paths["S2_raw"] / "scenes.csv"
+    selected = pd.read_csv(manifest_path) if manifest_path.exists() else pd.DataFrame(columns=["roi", "scene"])
     folder = paths["S2_raw"] / roi
-    rows = [
-        {"path": path, "date": _scene_date(path)}
-        for path in sorted(folder.glob("*.tif"))
-    ] if folder.exists() else []
+    files = [folder / f"{scene}.tif" for scene in sorted(set(selected.loc[selected["roi"] == roi, "scene"]))]
+    rows = [{"path": path, "date": _scene_date(path)} for path in files if path.exists()]
     return pd.DataFrame(rows, columns=["path", "date"])
 
 

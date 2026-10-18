@@ -72,7 +72,7 @@ All user-facing settings live in [`code/config.toml`](code/config.toml):
 | `[data_generation] first_year`, `last_year` | Reference dates are Jun-18 and Dec-15 of every year in this range |
 | `[data_generation] windows` | Start and end (exclusive) of the t0, t1, t2 windows, in days from the reference date |
 | `[data_generation] training_points`, `validation_points` | Points per class in each set |
-| `[data_generation.sentinel2]` | S2 scene cloud filter and s2cloudless mask parameters |
+| `[data_generation.sentinel2]` | S2 scene cloud filter (per window, from 20 % rising by 10 % until 3 days cover the ROI) and s2cloudless mask parameters |
 
 Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGDC`, `LinearSVC`, `SVC_rbf`  
 Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`

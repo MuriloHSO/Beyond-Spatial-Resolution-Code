@@ -103,13 +103,18 @@ training_points = 12000
 validation_points = 4000
 
 # Sentinel-2 scene filter and s2cloudless cloud/shadow mask (computed in GEE).
-# cloud_filter                : maximum CLOUDY_PIXEL_PERCENTAGE of a scene (%).
+# cloud_filter                : starting maximum CLOUDY_PIXEL_PERCENTAGE of a scene (%).
+# cloud_filter_step           : increase (%) of the maximum, up to 100, while a window has
+#                               fewer than min_full_coverage_days days covering the whole ROI.
+# min_full_coverage_days      : days whose selected scenes together cover the ROI (>= 99 %).
 # cloud_probability_threshold : s2cloudless probability (%) above which a pixel is cloud.
 # nir_dark_threshold          : NIR reflectance below which a pixel may be cloud shadow.
 # cloud_projection_distance   : maximum distance (km) to search for shadows from clouds.
 # buffer                      : dilation (m) of the cloud/shadow mask.
 [data_generation.sentinel2]
-cloud_filter = 50
+cloud_filter = 20
+cloud_filter_step = 10
+min_full_coverage_days = 3
 cloud_probability_threshold = 60
 nir_dark_threshold = 0.15
 cloud_projection_distance = 2
