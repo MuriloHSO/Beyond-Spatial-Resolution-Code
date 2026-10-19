@@ -5,22 +5,24 @@ Core model training and evaluation logic.
 """
 
 import gc
+import json
 import time
 from pathlib import Path
 
+import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import rasterio
+import sklearn
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import (
     accuracy_score,
     cohen_kappa_score,
     confusion_matrix,
-    make_scorer,
     precision_recall_fscore_support,
 )
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from matplotlib import colors
 
@@ -44,6 +46,7 @@ def train_and_evaluate_model(
     tuning: dict = None,
     random_state: int = DEFAULT_RANDOM_STATE,
     groups=None,
+    models_path=None,
 ) -> tuple:
     """
     Train every model in *models*, evaluate on the validation set and (optionally)
@@ -69,24 +72,25 @@ def train_and_evaluate_model(
         ``None`` or ``tuning["enabled"]`` is ``False``, the default
         hyperparameters are used.
     random_state : int
-        Seed for the hyperparameter search and the 10-fold CV split.
+        Seed for the hyperparameter search.
     groups : array-like, optional
         Spatial block of each training point, used to split the tuning folds.
+    models_path : Path, optional
+        Where each fitted model is saved: ``<imagery>_<model>.joblib`` (scaler +
+        model, lzma-compressed) and ``<imagery>_<model>.json`` (hyperparameters,
+        features, scaler statistics, versions). Not saved when ``None``.
 
     Returns
     -------
-    (params, results_df, class_metrics_df, confusion_df)
+    (params, results_df, class_metrics_df, confusion_df, predictions_df)
         ``class_metrics_df`` has the per-class precision, recall, F1 and support on the
         validation set; ``confusion_df`` has the confusion matrix in long format
-        (true class, predicted class, count).
+        (true class, predicted class, count); ``predictions_df`` has the predicted
+        class of every validation point (``Point`` = row of the validation table).
     """
     scaler = StandardScaler()
     X_train_norm = scaler.fit_transform(X_train)
     X_test_norm = scaler.transform(X_test)
-
-    # K-Fold setup for robust variability estimates
-    kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=random_state)
-    kappa_scorer = make_scorer(cohen_kappa_score)
 
     filename = Path(imagery).stem if imagery is not None else "dataset"
     if condition_label is not None:
@@ -156,6 +160,7 @@ def train_and_evaluate_model(
     results = []
     class_rows = []
     confusion_rows = []
+    prediction_frames = []
     labels = np.unique(y_train)
     n_models = len(models)
     for model_idx, (model_name, model) in enumerate(models.items(), 1):
@@ -166,19 +171,8 @@ def train_and_evaluate_model(
                 model_name, model, X_train, y_train, groups, tuning, random_state
             )
 
-        # K-Fold variability on training data
-        cv_acc_scores = cross_val_score(
-            model, X_train_norm, y_train, cv=kfold, scoring="accuracy", n_jobs=-1
-        )
-        accuracy_std = round(float(np.std(cv_acc_scores)), 6)
-
-        cv_kappa_scores = cross_val_score(
-            model, X_train_norm, y_train, cv=kfold, scoring=kappa_scorer, n_jobs=-1
-        )
-        kappa_std = round(float(np.std(cv_kappa_scores)), 6)
-
         # Timed fits and predictions use all CPU threads where the estimator supports it
-        # (after the search and the CV above, which already run in parallel).
+        # (after the search, which already runs in parallel).
         if "n_jobs" in model.get_params():
             model.set_params(n_jobs=-1)
 
@@ -210,7 +204,15 @@ def train_and_evaluate_model(
             classification_time = float(np.mean(classification_times))
             classification_time_std = round(float(np.std(classification_times)), 6)
 
-        # Metrics
+        if models_path is not None:
+            _save_model(models_path, name, model_name, scaler, model, list(X_train.columns),
+                        best_params, random_state, len(y_train))
+        prediction_frames.append(pd.DataFrame({
+            "Imagery": name, "Models": model_name, "Point": np.asarray(y_test.index),
+            "True Class": np.asarray(y_test), "Predicted Class": y_pred,
+        }))
+
+        # Metrics (confidence intervals are added by the dispatcher, src.experiments)
         accuracy = round(accuracy_score(y_test, y_pred), 6)
         kappa = round(cohen_kappa_score(y_test, y_pred), 6)
         precision, recall, f1, support = precision_recall_fscore_support(
@@ -242,9 +244,7 @@ def train_and_evaluate_model(
                 name,
                 model_name,
                 accuracy,
-                accuracy_std,
                 kappa,
-                kappa_std,
                 macro_f1,
                 # TT = time to obtain a trained model: hyperparameter search (once) + final fit (mean of 3)
                 round(training_time + (tuning_time if best_params else 0.0), 6),
@@ -291,9 +291,7 @@ def train_and_evaluate_model(
             "Imagery",
             "Models",
             "OA",
-            "OA Std (KFold)",
             "Kappa",
-            "Kappa Std (KFold)",
             "Macro F1",
             "Training Time (s)",
             "Training Time Std (s)",
@@ -312,8 +310,42 @@ def train_and_evaluate_model(
     confusion_df = pd.DataFrame(
         confusion_rows, columns=["Imagery", "Models", "True Class", "Predicted Class", "Count"]
     )
+    predictions_df = pd.concat(prediction_frames, ignore_index=True)
 
-    return params, results_df, class_metrics_df, confusion_df
+    return params, results_df, class_metrics_df, confusion_df, predictions_df
+
+
+def _save_model(models_path, imagery, model_name, scaler, model, features, best_params,
+                random_state, n_train) -> None:
+    """Save the fitted scaler + model (joblib, lzma) and a JSON record that allows an exact refit."""
+    stem = Path(models_path) / f"{imagery}_{model_name}"
+    joblib.dump(Pipeline([("scaler", scaler), ("model", model)]), f"{stem}.joblib", compress=("lzma", 6))
+    record = {
+        "imagery": imagery,
+        "model": model_name,
+        "estimator": type(model).__name__,
+        "features": features,
+        "hyperparameters": {k: _json_value(v) for k, v in sorted(model.get_params().items())},
+        "tuned_hyperparameters": {k: _json_value(v) for k, v in sorted(best_params.items())},
+        "scaler": {"mean": scaler.mean_.tolist(), "scale": scaler.scale_.tolist()},
+        "random_state": random_state,
+        "training_points": int(n_train),
+        "scikit_learn": sklearn.__version__,
+    }
+    with open(f"{stem}.json", "w", encoding="utf-8") as fh:
+        json.dump(record, fh, indent=1)
+
+
+def _json_value(value):
+    if isinstance(value, (np.integer,)):
+        return int(value)
+    if isinstance(value, (np.floating,)):
+        return float(value)
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, (list, tuple)):
+        return [_json_value(v) for v in value]
+    return repr(value)
 
 
 def _format_params(params: dict, full_precision: bool = False) -> str:

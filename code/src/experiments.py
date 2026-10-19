@@ -4,11 +4,16 @@ experiments.py
 Experiment definitions and the dispatcher that runs them.
 """
 
+import numpy as np
 import pandas as pd
 from .config import DEFAULT_RANDOM_STATE
 from .training import INTERNAL_COLUMNS, train_and_evaluate_model
 from .paths import get_image_lists
 from .tuning import spatial_blocks
+from .uncertainty import confusion_counts, interval, metrics_from_confusion, validation_resamples
+
+# Same band set of both sensors, for the paired S2 - PS differences.
+SENSOR_PAIRS = {"4 bands": ("S2_1", "PS_1"), "all bands": ("S2_2", "PS_2")}
 
 
 # ---------------------------------------------------------------------------
@@ -59,19 +64,20 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
     X2, y2 = datasets["df_s2val"][S2_BANDS_4],   datasets["df_s2val"]["Class"]
 
     imagery = _get_imagery(paths, "S2")
-    params, results, class_metrics, confusion = train_and_evaluate_model(
+    params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="S2_1",
         tuning=tuning,
         random_state=random_state,
         groups=groups,
+        models_path=paths["models_path"],
     )
 
     if save_csv:
         results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "S2_4b.csv", index=False)
 
-    return params, results, class_metrics, confusion
+    return params, results, class_metrics, confusion, predictions
 
 
 def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
@@ -81,19 +87,20 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
     X2, y2 = datasets["df_s2val"][S2_BANDS_ALL],   datasets["df_s2val"]["Class"]
 
     imagery = _get_imagery(paths, "S2")
-    params, results, class_metrics, confusion = train_and_evaluate_model(
+    params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="S2_2",
         tuning=tuning,
         random_state=random_state,
         groups=groups,
+        models_path=paths["models_path"],
     )
 
     if save_csv:
         results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "S2_Allb.csv", index=False)
 
-    return params, results, class_metrics, confusion
+    return params, results, class_metrics, confusion, predictions
 
 
 def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, save_csv=True,
@@ -103,19 +110,20 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
     X2, y2 = datasets["df_pssval"][PS_BANDS_4],   datasets["df_pssval"]["Class"]
 
     imagery = _get_imagery(paths, "PS")
-    params, results, class_metrics, confusion = train_and_evaluate_model(
+    params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="PS_1",
         tuning=tuning,
         random_state=random_state,
         groups=groups,
+        models_path=paths["models_path"],
     )
 
     if save_csv:
         results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "PS_4b.csv", index=False)
 
-    return params, results, class_metrics, confusion
+    return params, results, class_metrics, confusion, predictions
 
 
 def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
@@ -125,19 +133,20 @@ def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, s
     X2, y2 = datasets["df_pssval"][PS_BANDS_ALL],   datasets["df_pssval"]["Class"]
 
     imagery = _get_imagery(paths, "PS")
-    params, results, class_metrics, confusion = train_and_evaluate_model(
+    params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
         condition_label="PS_2",
         tuning=tuning,
         random_state=random_state,
         groups=groups,
+        models_path=paths["models_path"],
     )
 
     if save_csv:
         results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "PS_Allb.csv", index=False)
 
-    return params, results, class_metrics, confusion
+    return params, results, class_metrics, confusion, predictions
 
 
 # ---------------------------------------------------------------------------
@@ -163,6 +172,7 @@ def run_all_experiments(
     paths: dict,
     tuning: dict = None,
     random_state: int = DEFAULT_RANDOM_STATE,
+    uncertainty: dict = None,
 ) -> pd.DataFrame:
     """
     Run a list of experiments and return the combined results DataFrame.
@@ -184,19 +194,25 @@ def run_all_experiments(
         Tuned results are saved to ``model_results_tuned.csv`` so the
         default-hyperparameter results are not overwritten.
     random_state : int
-        Seed for the classifiers' CV splits and the hyperparameter search.
+        Seed for the hyperparameter search and the bootstrap resamples.
+    uncertainty : dict
+        ``n_resamples``, ``block_size`` (m) and ``confidence`` of the class-stratified
+        block bootstrap of the validation points (see :mod:`src.uncertainty`).
 
     Returns
     -------
     pd.DataFrame
-        Concatenated results from all experiments, also saved to
-        ``results_path/model_results.csv`` (or ``model_results_tuned.csv``).  The per-class
-        metrics and confusion matrices are saved next to it as ``class_metrics*.csv`` and
-        ``confusion_matrices*.csv``.
+        Concatenated results from all experiments, with confidence intervals of OA,
+        Kappa and Macro F1, also saved to ``results_path/model_results.csv`` (or
+        ``model_results_tuned.csv``).  Saved next to it: ``class_metrics*.csv`` (with
+        intervals), ``confusion_matrices*.csv``, ``validation_predictions*.csv.gz`` (class
+        predicted for every validation point) and ``sensor_differences*.csv`` (paired
+        S2 - PS differences of OA with intervals).
     """
     selected_results = []
     selected_class_metrics = []
     selected_confusion = []
+    selected_predictions = []
     n_exps = len(selected_experiments)
 
     for exp_i, item in enumerate(selected_experiments, 1):
@@ -211,7 +227,7 @@ def run_all_experiments(
         img_note = "  [+image]" if apply_flag else ""
         print(f"\n  + [{exp_i}/{n_exps}] {name}{img_note}")
 
-        _params, results_i, class_metrics_i, confusion_i = EXPERIMENT_QUEUE[name](
+        _params, results_i, class_metrics_i, confusion_i, predictions_i = EXPERIMENT_QUEUE[name](
             models=models,
             datasets=datasets,
             paths=paths,
@@ -223,6 +239,7 @@ def run_all_experiments(
         selected_results.append(results_i)
         selected_class_metrics.append(class_metrics_i)
         selected_confusion.append(confusion_i)
+        selected_predictions.append(predictions_i)
 
     combined = (
         pd.concat(selected_results, ignore_index=True)
@@ -230,12 +247,21 @@ def run_all_experiments(
         else pd.DataFrame()
     )
     name = results_filename(tuning)
+    class_metrics = pd.concat(selected_class_metrics, ignore_index=True) if selected_results else pd.DataFrame()
+    if selected_results:
+        predictions = pd.concat(selected_predictions, ignore_index=True)
+        combined, class_metrics, differences = _add_intervals(
+            combined, class_metrics, predictions, datasets["df_s2val"], uncertainty, random_state
+        )
+        predictions.to_csv(
+            paths["results_path"] / name.replace("model_results", "validation_predictions").replace(".csv", ".csv.gz"),
+            index=False,
+        )
+        differences.to_csv(paths["results_path"] / name.replace("model_results", "sensor_differences"), index=False)
     combined.drop(columns=INTERNAL_COLUMNS, errors="ignore").to_csv(paths["results_path"] / name, index=False)
     # Per-class metrics and confusion matrices on the validation set.
     if selected_results:
-        pd.concat(selected_class_metrics, ignore_index=True).to_csv(
-            paths["results_path"] / name.replace("model_results", "class_metrics"), index=False
-        )
+        class_metrics.to_csv(paths["results_path"] / name.replace("model_results", "class_metrics"), index=False)
         pd.concat(selected_confusion, ignore_index=True).to_csv(
             paths["results_path"] / name.replace("model_results", "confusion_matrices"), index=False
         )
@@ -245,6 +271,48 @@ def run_all_experiments(
             paths["scratch_path"] / name.replace("model_results", "time_breakdown"), index=False
         )
     return combined
+
+
+def _add_intervals(results, class_metrics, predictions, df_val, settings, random_state):
+    """
+    Bootstrap confidence intervals of the validation metrics (class-stratified spatial
+    blocks, the same resamples for every experiment and model) and the paired S2 - PS
+    differences of OA.
+    """
+    resamples = validation_resamples(df_val, settings, random_state)
+    confidence = settings["confidence"]
+    labels = np.unique(df_val["Class"])
+    draws = {}
+    for (imagery, model), group in predictions.groupby(["Imagery", "Models"], sort=False):
+        group = group.set_index("Point").loc[df_val.index]  # validation-table order, as the resample indices
+        counts = confusion_counts(group["True Class"], group["Predicted Class"], labels, resamples)
+        draws[imagery, model] = metrics_from_confusion(counts)
+
+    keys = list(zip(results["Imagery"], results["Models"]))
+    for metric in ("OA", "Kappa", "Macro F1"):
+        low, high = zip(*(interval(draws[k][metric], confidence) for k in keys))
+        position = results.columns.get_loc(metric) + 1
+        results.insert(position, f"{metric} CI Low", np.round(low, 6))
+        results.insert(position + 1, f"{metric} CI High", np.round(high, 6))
+
+    column = {label: i for i, label in enumerate(labels)}
+    rows = list(zip(class_metrics["Imagery"], class_metrics["Models"], class_metrics["Class"]))
+    for metric in ("Precision", "Recall", "F1"):
+        bounds = {key: interval(d[metric], confidence) for key, d in draws.items()}
+        position = class_metrics.columns.get_loc(metric) + 1
+        class_metrics.insert(position, f"{metric} CI Low", [round(float(bounds[i, m][0][column[c]]), 6) for i, m, c in rows])
+        class_metrics.insert(position + 1, f"{metric} CI High", [round(float(bounds[i, m][1][column[c]]), 6) for i, m, c in rows])
+
+    oa = results.set_index(["Imagery", "Models"])["OA"]
+    differences = []
+    for bands, (s2, ps) in SENSOR_PAIRS.items():
+        for model in results["Models"].unique():
+            if (s2, model) in draws and (ps, model) in draws:
+                low, high = interval(draws[s2, model]["OA"] - draws[ps, model]["OA"], confidence)
+                differences.append({"Models": model, "Bands": bands, "S2 Imagery": s2, "PS Imagery": ps,
+                                    "OA Difference (S2 - PS)": round(float(oa[s2, model] - oa[ps, model]), 6),
+                                    "CI Low": round(float(low), 6), "CI High": round(float(high), 6)})
+    return results, class_metrics, pd.DataFrame(differences)
 
 
 def results_filename(tuning: dict = None) -> str:

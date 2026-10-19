@@ -1,0 +1,74 @@
+{
+ "imagery": "PS_1",
+ "model": "CART",
+ "estimator": "DecisionTreeClassifier",
+ "features": [
+  "B2_0",
+  "B4_0",
+  "B6_0",
+  "B8_0",
+  "B2_1",
+  "B4_1",
+  "B6_1",
+  "B8_1",
+  "B2_2",
+  "B4_2",
+  "B6_2",
+  "B8_2"
+ ],
+ "hyperparameters": {
+  "ccp_alpha": 0.0,
+  "class_weight": null,
+  "criterion": "entropy",
+  "max_depth": null,
+  "max_features": null,
+  "max_leaf_nodes": null,
+  "min_impurity_decrease": 0.0,
+  "min_samples_leaf": 6,
+  "min_samples_split": 11,
+  "min_weight_fraction_leaf": 0.0,
+  "monotonic_cst": null,
+  "random_state": 2025,
+  "splitter": "best"
+ },
+ "tuned_hyperparameters": {
+  "criterion": "entropy",
+  "max_depth": null,
+  "max_features": null,
+  "min_samples_leaf": 6,
+  "min_samples_split": 11
+ },
+ "scaler": {
+  "mean": [
+   1240.7849824561404,
+   1613.4109473684211,
+   1822.175859649123,
+   3217.6982807017544,
+   1288.5441403508771,
+   1646.9212631578948,
+   1818.8868421052632,
+   3188.9008070175437,
+   963.3485614035088,
+   1285.692596491228,
+   1374.1877894736842,
+   3142.862456140351
+  ],
+  "scale": [
+   1076.5881011751974,
+   1138.581500353322,
+   1203.771825242983,
+   992.6011124157446,
+   1019.1828947563387,
+   1082.2434894709527,
+   1192.5571010061544,
+   997.8905231340522,
+   1004.3357780824732,
+   1082.4066964341725,
+   1180.2369233001816,
+   832.9719974827838
+  ]
+ },
+ "random_state": 2025,
+ "training_points": 28500,
+ "scikit_learn": "1.9.0"
+}

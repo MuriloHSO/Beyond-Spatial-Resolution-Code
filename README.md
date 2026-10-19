@@ -27,8 +27,11 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 `results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
 - Classification maps (PNG and TIFF), metric tables, and figures
 - `sample_counts.csv` — number of training and validation points per sensor and class
-- `model_results_tuned.csv` — OA, Cohen's kappa, macro F1, training time (TT), image inference speed (IS) and selected hyperparameters of every model
-- `class_metrics_tuned.csv` — per-class precision, recall, F1 and support on the validation set
+- `model_results_tuned.csv` — OA, Cohen's kappa and macro F1 on the validation set with their 95 % confidence intervals (`CI Low`, `CI High`), training time (TT), image inference speed (IS) and selected hyperparameters of every model
+- `class_metrics_tuned.csv` — per-class precision, recall, F1 (with confidence intervals) and support on the validation set
+- `sensor_differences_tuned.csv` — OA difference S2 − PS for the same model and band set, with a paired confidence interval
+- `validation_predictions_tuned.csv.gz` — class predicted by every model for every validation point (`Point` = row of the validation CSV), from which all metrics and intervals can be recomputed
+- `Models/` — every fitted model: `<imagery>_<model>.joblib` (scaler + model, lzma-compressed; load only trusted files, with the pinned scikit-learn) and `<imagery>_<model>.json` (all hyperparameters, features, scaler statistics, seed and versions, enough to refit the model exactly). Only the JSON files are tracked in git
 - `confusion_matrices_tuned.csv` — confusion matrix of every model on the validation set (long format: true class, predicted class, count); `figures/Fig_B.7_confusion_matrices.png` shows those of the most accurate classifier of each experiment
 
 `scratch/` - temporary and internal files, not part of the results (git-ignored), e.g. the breakdown of the training time (`time_breakdown_tuned.csv`).
@@ -67,6 +70,9 @@ All user-facing settings live in [`code/config.toml`](code/config.toml):
 | `[tuning] factor` | Successive Halving elimination rate between rounds |
 | `[tuning] cv_folds` | Inner stratified CV folds used to score each configuration |
 | `[tuning] block_size` | Side (m) of the square spatial blocks used to build the inner CV folds |
+| `[uncertainty] n_resamples` | Bootstrap resamples for the confidence intervals of the validation metrics |
+| `[uncertainty] block_size` | Side (m) of the square blocks resampled by the bootstrap |
+| `[uncertainty] confidence` | Coverage of the percentile confidence intervals |
 | `[data_generation] preprocess` | `true` to build the composites from the raw scenes (also `--preprocess`; default `false`) |
 | `[data_generation] generate_points` | `true` to regenerate the four CSVs from the polygons and composites (also `--generate-points`; default `false`) |
 | `[data_generation] first_year`, `last_year` | Reference dates are Jun-18 and Dec-15 of every year in this range |
@@ -94,6 +100,9 @@ Training points are only a few metres apart, so neighbouring points often fall i
 MLP and LinearSVC use a larger maximum number of iterations than the scikit-learn defaults (`max_iter` 1000 and 10,000, set in `src/config.py`): with the defaults (200 and 1000), MLP stopped before converging in some image sets and LinearSVC results varied with the random seed.
 
 Tuning uses only the training set; the validation set is never seen during the search. Standardisation is fit inside each inner fold to avoid leakage. Tuned results are saved to `model_results_tuned.csv`, so `model_results.csv` keeps the default-hyperparameter results. In the tuned results, `Training Time (s)` is the time to obtain a trained model: the hyperparameter search plus the final fit (mean of 3 fits), and `Best Params` lists the selected hyperparameters. All times are elapsed times with every CPU thread available: the search runs its candidates in parallel, and the final model uses all threads where the estimator supports it (`n_jobs`). The breakdown of the training time (search, final fit and inner-CV OA) is written to `scratch/time_breakdown_tuned.csv`, outside `results/`.
+
+## Confidence intervals
+Error bars and intervals describe the uncertainty of the validation metrics. Validation points a few metres apart are not independent, so they are not resampled one by one: a class-stratified spatial block bootstrap (`src/uncertainty.py`) draws, for each class, the 1 km blocks holding its points with replacement, 2,000 times, and reports 95 % percentile intervals. The same resamples serve every model and experiment, so the S2 − PS differences get paired intervals.
 
 ## Declaration of AI-assisted coding
 We refactored the original notebook (.ipynb) code initially used for the paper into a version that meets Code Ocean's reproducibility requirements, using the free versions of Gemini 2.0 and GitHub Copilot (from June/July 2026).

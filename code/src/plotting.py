@@ -19,7 +19,7 @@ import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.ticker import FormatStrFormatter
+from matplotlib.ticker import FormatStrFormatter, MaxNLocator
 
 
 # ---------------------------------------------------------------------------
@@ -562,14 +562,11 @@ def plot_oa_kappa_bars(results_file, results_path):
         conds_sorted = sorted(conds, key=lambda c: get_band_count(c) if get_band_count(c) is not None else 999)
         return conds_sorted[0], conds_sorted[-1]
 
-    def get_metric_std_col(df_in, std_candidates):
-        return next((c for c in std_candidates if c in df_in.columns), None)
-
-    def prepare_metric_frames(df_in, metric_col, std_col):
-        if metric_col not in df_in.columns:
-            raise ValueError(f"Required column not found: {metric_col}")
-        if std_col is None:
-            raise ValueError(f"Standard deviation column not found for {metric_col}.")
+    def prepare_metric_frames(df_in, metric_col):
+        low_col, high_col = f"{metric_col} CI Low", f"{metric_col} CI High"
+        for col in (metric_col, low_col, high_col):
+            if col not in df_in.columns:
+                raise ValueError(f"Required column not found: {col}")
 
         s2_low, s2_high = pick_conditions(df_in, "S2")
         ps_low, ps_high = pick_conditions(df_in, "PS")
@@ -577,8 +574,8 @@ def plot_oa_kappa_bars(results_file, results_path):
             raise ValueError("Could not identify two conditions for S2 and PS.")
 
         def get_cond_df(cond_name):
-            out = df_in[df_in["Imagery"].astype(str) == cond_name][["Models", metric_col, std_col]].copy()
-            return out.rename(columns={metric_col: "value", std_col: "std"}).set_index("Models")
+            out = df_in[df_in["Imagery"].astype(str) == cond_name][["Models", metric_col, low_col, high_col]].copy()
+            return out.rename(columns={metric_col: "value", low_col: "low", high_col: "high"}).set_index("Models")
 
         df_s2_low  = get_cond_df(s2_low)
         df_s2_high = get_cond_df(s2_high)
@@ -604,14 +601,8 @@ def plot_oa_kappa_bars(results_file, results_path):
             "ps_high": df_ps_high.loc[common_models],
         }
 
-    oa_std_candidates    = ["OA Std (KFold)", "OA Std", "OA_std", "Accuracy Std (KFold)", "accuracy_std"]
-    kappa_std_candidates = ["Kappa Std (KFold)", "Kappa Std", "Kappa_std", "kappa_std"]
-
-    oa_std_col    = get_metric_std_col(df_results, oa_std_candidates)
-    kappa_std_col = get_metric_std_col(df_results, kappa_std_candidates)
-
-    oa_data    = prepare_metric_frames(df_results, metric_col="OA",    std_col=oa_std_col)
-    kappa_data = prepare_metric_frames(df_results, metric_col="Kappa", std_col=kappa_std_col)
+    oa_data    = prepare_metric_frames(df_results, metric_col="OA")
+    kappa_data = prepare_metric_frames(df_results, metric_col="Kappa")
 
     final_models = [m for m in oa_data["models"] if m in set(kappa_data["models"])]
     if not final_models:
@@ -628,36 +619,39 @@ def plot_oa_kappa_bars(results_file, results_path):
         nrows=2, ncols=1, figsize=(9.4, 10),
         sharex=True, gridspec_kw={"hspace": 0.18},
     )
-    fig.subplots_adjust(left=0.09, right=0.985, top=0.985, bottom=0.085, hspace=0.18)
+    fig.subplots_adjust(left=0.09, right=0.985, top=0.95, bottom=0.085, hspace=0.18)
 
     def plot_metric_panel(ax, data, ylabel):
-        y_s2_low  = data["s2_low"]["value"].astype(float).values
-        e_s2_low  = data["s2_low"]["std"].fillna(0).astype(float).values
-        y_s2_high = data["s2_high"]["value"].astype(float).values
-        e_s2_high = data["s2_high"]["std"].fillna(0).astype(float).values
-        y_ps_low  = data["ps_low"]["value"].astype(float).values
-        e_ps_low  = data["ps_low"]["std"].fillna(0).astype(float).values
-        y_ps_high = data["ps_high"]["value"].astype(float).values
-        e_ps_high = data["ps_high"]["std"].fillna(0).astype(float).values
+        def bar_values(frame):
+            # Error bars: 95 % bootstrap interval of the validation metric (asymmetric)
+            value = frame["value"].astype(float).values
+            return value, np.vstack([value - frame["low"].astype(float).values, frame["high"].astype(float).values - value])
+
+        y_s2_low,  e_s2_low  = bar_values(data["s2_low"])
+        y_s2_high, e_s2_high = bar_values(data["s2_high"])
+        y_ps_low,  e_ps_low  = bar_values(data["ps_low"])
+        y_ps_high, e_ps_high = bar_values(data["ps_high"])
 
         ax.bar(x - 1.5 * w, y_s2_low,  w, yerr=e_s2_low,  color="lightskyblue", capsize=3, linewidth=0, label="S2_1 (4 bands)")
         ax.bar(x - 0.5 * w, y_s2_high, w, yerr=e_s2_high, color="steelblue",    capsize=3, linewidth=0, label="S2_2 (all bands)")
         ax.bar(x + 0.5 * w, y_ps_low,  w, yerr=e_ps_low,  color="#F29A8E",      capsize=3, linewidth=0, label="PS_1 (4 bands)")
         ax.bar(x + 1.5 * w, y_ps_high, w, yerr=e_ps_high, color="#E85C4A",      capsize=3, linewidth=0, label="PS_2 (all bands)")
 
-        all_vals = np.concatenate([y_s2_low, y_s2_high, y_ps_low, y_ps_high])
+        all_vals = np.concatenate([y_s2_low - e_s2_low[0], y_s2_high - e_s2_high[0], y_ps_low - e_ps_low[0], y_ps_high - e_ps_high[0],
+                                   y_s2_low + e_s2_low[1], y_s2_high + e_s2_high[1], y_ps_low + e_ps_low[1], y_ps_high + e_ps_high[1]])
         y_min = max(0.0, float(np.min(all_vals)) - 0.005)
         y_max = min(1.0, float(np.max(all_vals)) + 0.005)
         ax.set_ylim(y_min, y_max)
-        ax.set_yticks(np.arange(y_min, y_max + 0.0001, 0.005))
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=8))
         ax.yaxis.set_major_formatter(FormatStrFormatter("%.3f"))
         ax.set_ylabel(ylabel)
         ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.7)
-        ax.legend(loc="lower right", frameon=True, facecolor="white", edgecolor="0.65", framealpha=0.95)
 
     plot_metric_panel(ax1, oa_data,    ylabel="Overall Accuracy (OA)")
     plot_metric_panel(ax2, kappa_data, ylabel="Cohen's Kappa (k)")
 
+    # One legend above the panels, so it never covers bars or error bars
+    ax1.legend(loc="lower center", bbox_to_anchor=(0.5, 1.01), ncol=4, frameon=False)
     ax1.text(0.01, 0.92, "(a)", transform=ax1.transAxes, fontsize=18, fontweight="bold", va="top")
     ax2.text(0.01, 0.92, "(b)", transform=ax2.transAxes, fontsize=18, fontweight="bold", va="top")
 

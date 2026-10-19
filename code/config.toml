@@ -74,6 +74,23 @@ cv_folds = 5
 block_size = 1000
 
 # -----------------------------------------------------------------------------
+# Confidence intervals of the validation metrics (error bars)
+#
+# Class-stratified spatial block bootstrap of the validation points: for each
+# class, the blocks holding its points are drawn with replacement (points a few
+# metres apart are not independent). The same resamples serve every model and
+# experiment, so S2 - PS differences get paired intervals.
+#
+# n_resamples : bootstrap resamples.
+# block_size  : side (m) of the square blocks.
+# confidence  : coverage of the percentile intervals.
+# -----------------------------------------------------------------------------
+[uncertainty]
+n_resamples = 2000
+block_size = 1000
+confidence = 0.95
+
+# -----------------------------------------------------------------------------
 # Data generation (complete run only; off by default)
 #
 # preprocess        : build the 3-time-series composites (30-day mean per
@@ -99,7 +116,7 @@ generate_points = false
 first_year = 2020
 last_year = 2022
 windows = [[-30, 0], [30, 60], [100, 130]]
-training_points = 12000
+training_points = 9500
 validation_points = 4000
 
 # Sentinel-2 scene filter and s2cloudless cloud/shadow mask (computed in GEE).

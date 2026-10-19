@@ -121,6 +121,11 @@ _FALLBACK_TUNING = {
     "cv_folds": 5,
     "block_size": 1000,
 }
+_FALLBACK_UNCERTAINTY = {
+    "n_resamples": 2000,
+    "block_size": 1000,
+    "confidence": 0.95,
+}
 _FALLBACK_EXPERIMENTS = [
     {"name": "S2_4b",   "apply_model_on_image": True},
     {"name": "S2_Allb", "apply_model_on_image": True},
@@ -243,6 +248,7 @@ def resolve_config(args) -> dict:
 
     # --- hyperparameter tuning ---
     tuning = {**_FALLBACK_TUNING, **toml.get("tuning", {})}
+    uncertainty = {**_FALLBACK_UNCERTAINTY, **toml.get("uncertainty", {})}
     if args.no_tuning:
         tuning["enabled"] = False
 
@@ -257,6 +263,7 @@ def resolve_config(args) -> dict:
         "selected_experiments": selected_experiments,
         "skip_plots": skip_plots,
         "tuning": tuning,
+        "uncertainty": uncertainty,
         "data_generation": data_generation,
     }
 
@@ -377,6 +384,11 @@ def main(argv=None):
         )
     else:
         print("  Tuning        : disabled (default hyperparameters)")
+    uncertainty = cfg["uncertainty"]
+    print(
+        f"  Intervals     : {uncertainty['confidence']:.0%} class-stratified block bootstrap of the validation "
+        f"points ({uncertainty['n_resamples']} resamples, {uncertainty['block_size']} m blocks)"
+    )
     print(f"  Figures       : {'skipped' if cfg['skip_plots'] else 'enabled'}")
     data_generation = cfg["data_generation"]
     data_steps = [
@@ -493,6 +505,7 @@ def main(argv=None):
     paths,
     tuning=tuning,
     random_state=cfg["random_state"],
+    uncertainty=cfg["uncertainty"],
     )
     print(f"\n    [OK] All experiments complete.")
     RESULTS_FILE = paths["results_path"] / results_filename(tuning)
