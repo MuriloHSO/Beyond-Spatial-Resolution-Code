@@ -16,7 +16,7 @@ Inputs (scenes kept locally, not in the repository):
     data/raw/PlanetScope/**/<YYYYMMDD>_*_AnalyticMS_SR_8b*.tif
         8-band PlanetScope SuperDove surface reflectance, ordered from Planet.
     data/raw/Sentinel-2/<ROI>/<scene>.tif
-        10 S2 L2A bands + s2cloudless cloud/shadow mask on the ROI grid,
+        10 S2 L2A bands + Cloud Score+ cs_cdf on the ROI grid,
         downloaded by src/download_s2_gee.py (offered here if missing).
     data/polygons/ROIs.gpkg
         ROI polygons (EPSG:32723) from the Hugging Face dataset.
@@ -75,10 +75,7 @@ DEFAULTS = {
         "cloud_filter": 20,
         "cloud_filter_step": 10,
         "min_full_coverage_days": 3,
-        "cloud_probability_threshold": 60,
-        "nir_dark_threshold": 0.15,
-        "cloud_projection_distance": 2,
-        "buffer": 100,
+        "cs_cdf_threshold": 0.60,
     },
 }
 
@@ -230,8 +227,12 @@ def _read_on_grid(src, band: int, grid: dict) -> np.ndarray:
     return out
 
 
-def _window_mean(scenes: pd.DataFrame, sensor: str, band_index: int, grid: dict) -> np.ndarray:
-    """Mean of one band over the days of a window (NaN where no valid observation)."""
+def _window_mean(scenes: pd.DataFrame, sensor: str, band_index: int, grid: dict,
+                 cs_cdf_threshold: float | None = None) -> np.ndarray:
+    """
+    Mean of one band over the days of a window (NaN where no valid observation).
+    S2 pixels count only where Cloud Score+ cs_cdf (last band, x 10,000) >= *cs_cdf_threshold*.
+    """
     shape = (grid["height"], grid["width"])
     window_sum = np.zeros(shape, dtype=np.float64)
     window_days = np.zeros(shape, dtype=np.uint16)
@@ -244,8 +245,8 @@ def _window_mean(scenes: pd.DataFrame, sensor: str, band_index: int, grid: dict)
                 values = _read_on_grid(src, band_index, grid)
                 valid = values > 0
                 if sensor == "S2":
-                    cloudmask = _read_on_grid(src, src.count, grid)  # last band
-                    valid &= cloudmask == 0
+                    cs_cdf = _read_on_grid(src, src.count, grid)  # last band
+                    valid &= cs_cdf >= round(cs_cdf_threshold * 10000)
             day_sum[valid] += values[valid]
             day_n[valid] += 1
         observed = day_n > 0
@@ -256,9 +257,11 @@ def _window_mean(scenes: pd.DataFrame, sensor: str, band_index: int, grid: dict)
         return np.where(window_days > 0, window_sum / window_days, np.nan)
 
 
-def build_composite(scenes_by_window: list, sensor: str, grid: dict, out_path: Path, tags: dict) -> list:
+def build_composite(scenes_by_window: list, sensor: str, grid: dict, out_path: Path, tags: dict,
+                    cs_cdf_threshold: float | None = None) -> list:
     """
-    Write the 3-time-series composite of one sensor, ROI and reference date.
+    Write the 3-time-series composite of one sensor, ROI and reference date
+    (S2: only pixels with Cloud Score+ cs_cdf >= *cs_cdf_threshold*).
 
     Returns the share of pixels with no valid observation in each window.
     """
@@ -278,7 +281,7 @@ def build_composite(scenes_by_window: list, sensor: str, grid: dict, out_path: P
         for t, scenes in enumerate(scenes_by_window):
             no_data = np.zeros((grid["height"], grid["width"]), dtype=bool)
             for b, name in enumerate(bands, start=1):
-                mean = _window_mean(scenes, sensor, b, grid)
+                mean = _window_mean(scenes, sensor, b, grid, cs_cdf_threshold)
                 no_data |= np.isnan(mean)
                 index = t * len(bands) + b
                 dst.write(np.where(np.isnan(mean), 0, np.clip(np.rint(mean), 1, 65535)).astype("uint16"), index)
@@ -357,7 +360,8 @@ def build_all(paths: dict, cfg: dict, overwrite: bool = False) -> pd.DataFrame:
                     "WINDOWS_DAYS": str(cfg["windows"]),
                     **{f"SCENES_T{t}": ";".join(p.name for p in w["path"]) for t, w in enumerate(by_window)},
                 }
-                missing = build_composite(by_window, sensor, grid, out_path, tags)
+                missing = build_composite(by_window, sensor, grid, out_path, tags,
+                                          cfg["sentinel2"]["cs_cdf_threshold"])
                 print(f"    [OK] {out_path.name}: scenes per window {[len(w) for w in by_window]}, "
                       f"pixels without observation {[f'{m:.1%}' for m in missing]}")
                 for t, w in enumerate(by_window):

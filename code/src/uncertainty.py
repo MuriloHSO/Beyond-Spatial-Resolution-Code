@@ -1,14 +1,14 @@
 """
 uncertainty.py
 --------------
-Confidence intervals of the validation metrics by a class-stratified spatial
-block bootstrap.
+Confidence intervals of the validation metrics by a class-stratified bootstrap
+of polygons.
 
-Validation points a few metres apart are not independent, so points are not
-resampled one by one. The validation set is divided into square blocks
-(``block_size`` m); for each class, the blocks holding points of that class are
-drawn with replacement, and all points of that class in a drawn block enter the
-resample. Drawing per class keeps the class mix close to the balanced design.
+Points of the same labelled polygon on the same date are a few metres apart and
+not independent, so they are resampled together: for each class, its groups
+(a polygon on one reference date, or a single "others" point; see
+src.tuning.polygon_groups) are drawn with replacement. Drawing per class keeps
+the class mix close to the balanced design.
 
 The same resamples are used for every experiment and model (the validation
 points are the same for both sensors), so differences between them, such as
@@ -17,31 +17,29 @@ S2 - PS, get paired intervals.
 
 import numpy as np
 
-from .tuning import spatial_blocks
+from .tuning import polygon_groups
 
 
-def class_block_resamples(y, groups, n_resamples: int, random_state: int) -> list:
-    """Index arrays of *n_resamples* class-stratified block bootstrap resamples."""
+def class_group_resamples(y, groups, n_resamples: int, random_state: int) -> list:
+    """Index arrays of *n_resamples* class-stratified bootstrap resamples of *groups*."""
     y = np.asarray(y)
     groups = np.asarray(groups)
     rng = np.random.default_rng(random_state)
     by_class = []
     for label in np.unique(y):
         in_class = np.flatnonzero(y == label)
-        blocks = groups[in_class]
-        by_class.append([in_class[blocks == b] for b in np.unique(blocks)])
+        members = groups[in_class]
+        by_class.append([in_class[members == g] for g in np.unique(members)])
     resamples = []
     for _ in range(n_resamples):
-        parts = [np.concatenate([blocks[i] for i in rng.integers(0, len(blocks), len(blocks))]) for blocks in by_class]
+        parts = [np.concatenate([groups_[i] for i in rng.integers(0, len(groups_), len(groups_))]) for groups_ in by_class]
         resamples.append(np.concatenate(parts))
     return resamples
 
 
 def validation_resamples(df_val, settings: dict, random_state: int) -> list:
-    """Resamples of a validation table (columns Class, X, Y) with the [uncertainty] settings."""
-    return class_block_resamples(
-        df_val["Class"], spatial_blocks(df_val, settings["block_size"]), settings["n_resamples"], random_state
-    )
+    """Resamples of a validation table (Class, Polygon_ID, Reference_Date) with the [uncertainty] settings."""
+    return class_group_resamples(df_val["Class"], polygon_groups(df_val), settings["n_resamples"], random_state)
 
 
 def confusion_counts(y_true, y_pred, labels, resamples) -> np.ndarray:

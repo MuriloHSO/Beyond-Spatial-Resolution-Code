@@ -58,11 +58,10 @@ apply_model_on_image = false
 #                round keeps the best 1/factor of them and gives the
 #                survivors factor-times more training samples.
 # factor       : elimination rate between rounds.
-# cv_folds     : inner stratified folds used to score each configuration.
-# block_size   : side (m) of the square spatial blocks used to build the inner
-#                folds; all training points of a block stay in the same fold,
-#                so neighbouring (near-duplicate) points never sit on both
-#                sides of a split.
+# cv_folds     : inner stratified folds used to score each configuration; the
+#                points of a labelled polygon on one date (Polygon_ID and
+#                Reference_Date) stay in the same fold, so neighbouring
+#                (near-duplicate) points never sit on both sides of a split.
 # Search spaces are defined in src/tuning.py.  Tuned results are saved to
 # results/model_results_tuned.csv (model_results.csv keeps the defaults).
 
@@ -71,23 +70,21 @@ enabled = true
 n_candidates = 81
 factor = 3
 cv_folds = 5
-block_size = 1000
 
 # -----------------------------------------------------------------------------
 # Confidence intervals of the validation metrics (error bars)
 #
-# Class-stratified spatial block bootstrap of the validation points: for each
-# class, the blocks holding its points are drawn with replacement (points a few
-# metres apart are not independent). The same resamples serve every model and
-# experiment, so S2 - PS differences get paired intervals.
+# Class-stratified bootstrap of the validation points by polygon: for each
+# class, its polygons (one per date) and single "others" points are drawn with
+# replacement (points of a polygon are a few metres apart and not independent).
+# The same resamples serve every model and experiment, so S2 - PS differences
+# get paired intervals.
 #
 # n_resamples : bootstrap resamples.
-# block_size  : side (m) of the square blocks.
 # confidence  : coverage of the percentile intervals.
 # -----------------------------------------------------------------------------
 [uncertainty]
 n_resamples = 2000
-block_size = 1000
 confidence = 0.95
 
 # -----------------------------------------------------------------------------
@@ -119,20 +116,15 @@ windows = [[-30, 0], [30, 60], [100, 130]]
 training_points = 9500
 validation_points = 4000
 
-# Sentinel-2 scene filter and s2cloudless cloud/shadow mask (computed in GEE).
-# cloud_filter                : starting maximum CLOUDY_PIXEL_PERCENTAGE of a scene (%).
-# cloud_filter_step           : increase (%) of the maximum, up to 100, while a window has
-#                               fewer than min_full_coverage_days days covering the whole ROI.
-# min_full_coverage_days      : days whose selected scenes together cover the ROI (>= 99 %).
-# cloud_probability_threshold : s2cloudless probability (%) above which a pixel is cloud.
-# nir_dark_threshold          : NIR reflectance below which a pixel may be cloud shadow.
-# cloud_projection_distance   : maximum distance (km) to search for shadows from clouds.
-# buffer                      : dilation (m) of the cloud/shadow mask.
+# Sentinel-2 scene filter and Cloud Score+ mask.
+# cloud_filter           : starting maximum CLOUDY_PIXEL_PERCENTAGE of a scene (%).
+# cloud_filter_step      : increase (%) of the maximum, up to 100, while a window has
+#                          fewer than min_full_coverage_days days covering the whole ROI.
+# min_full_coverage_days : days whose selected scenes together cover the ROI (>= 99 %).
+# cs_cdf_threshold       : Cloud Score+ cs_cdf at or above which a pixel is clear
+#                          (0.60, as in the Earth Engine documentation).
 [data_generation.sentinel2]
 cloud_filter = 20
 cloud_filter_step = 10
 min_full_coverage_days = 3
-cloud_probability_threshold = 60
-nir_dark_threshold = 0.15
-cloud_projection_distance = 2
-buffer = 100
+cs_cdf_threshold = 0.60

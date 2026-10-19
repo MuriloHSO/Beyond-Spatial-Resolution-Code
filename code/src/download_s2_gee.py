@@ -2,17 +2,19 @@
 download_s2_gee.py
 
 Download Sentinel-2 L2A scenes (COPERNICUS/S2_SR_HARMONIZED) from Google Earth
-Engine for every ROI, reference date and composite window, with the
-s2cloudless cloud and cloud-shadow mask of Braaten (2020) computed in Earth
-Engine:
-https://developers.google.com/earth-engine/tutorials/community/sentinel-2-s2cloudless
+Engine for every ROI, reference date and composite window, with their Cloud
+Score+ quality score (GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED; Pasquarella et
+al., 2023, CVPR Workshops):
+https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_CLOUD_SCORE_PLUS_V1_S2_HARMONIZED
 
 Each scene is saved on the ROI's 10 m grid (EPSG:32723) as
     data/raw/Sentinel-2/<ROI>/<system:index>.tif
 with the 10 bands B2, B3, B4, B5, B6, B7, B8, B8A, B11, B12 (uint16,
-reflectance x 10,000; 0 outside the scene) and an 11th band "cloudmask"
-(1 = cloud, cloud shadow or no data; 0 = clear). Existing files are skipped, so
-an interrupted download resumes.
+reflectance x 10,000; 0 outside the scene) and an 11th band "cs_cdf" (Cloud
+Score+ cs_cdf x 10,000, uint16; 0 where there is no score). The mask is applied
+when compositing (src/preprocessing.py): a pixel is clear when cs_cdf >=
+cs_cdf_threshold (config.toml). Existing files are skipped, so an interrupted
+download resumes.
 
 Scene selection per window: the maximum CLOUDY_PIXEL_PERCENTAGE starts at
 cloud_filter (config.toml) and rises by cloud_filter_step, up to 100 %, until
@@ -45,7 +47,7 @@ from src.preprocessing import (
 )
 
 S2_COLLECTION_ID = "COPERNICUS/S2_SR_HARMONIZED"
-S2_CLOUD_PROBABILITY_ID = "COPERNICUS/S2_CLOUD_PROBABILITY"
+CLOUD_SCORE_PLUS_ID = "GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED"
 BANDS = SENSORS["S2"]["bands"]
 TILE = 512  # pixels per side of each request (11 bands x 512 x 512 x 2 bytes = 5.8 MB)
 WORKERS = 8  # tile requests in parallel
@@ -66,23 +68,23 @@ def initialize(project: str | None = None) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Cloud and cloud-shadow mask (s2cloudless)
+# Scene selection and Cloud Score+
 # ---------------------------------------------------------------------------
 
 def s2_collection(region, start: str, end: str, cloud_filter: float):
-    """S2 SR scenes with at most *cloud_filter* % cloudy pixels, joined with their s2cloudless image."""
+    """S2 SR scenes with at most *cloud_filter* % cloudy pixels, joined with their Cloud Score+ image."""
     import ee
 
     sr = (ee.ImageCollection(S2_COLLECTION_ID)
           .filterBounds(region)
           .filterDate(start, end)
           .filter(ee.Filter.lte("CLOUDY_PIXEL_PERCENTAGE", cloud_filter)))
-    probability = (ee.ImageCollection(S2_CLOUD_PROBABILITY_ID)
-                   .filterBounds(region)
-                   .filterDate(start, end))
-    return ee.ImageCollection(ee.Join.saveFirst("s2cloudless").apply(
+    scores = (ee.ImageCollection(CLOUD_SCORE_PLUS_ID)
+              .filterBounds(region)
+              .filterDate(start, end))
+    return ee.ImageCollection(ee.Join.saveFirst("cloud_score").apply(
         primary=sr,
-        secondary=probability,
+        secondary=scores,
         condition=ee.Filter.equals(leftField="system:index", rightField="system:index"),
     ))
 
@@ -114,38 +116,12 @@ def select_scenes(region, start: str, end: str, p: dict):
         cloud_filter = min(cloud_filter + p["cloud_filter_step"], 100)
 
 
-def add_cloud_mask(img, p: dict):
-    """Add a 'cloudmask' band: clouds (s2cloudless) plus their projected shadows, dilated."""
+def export_image(img):
+    """10 bands (0 outside the scene) and Cloud Score+ cs_cdf x 10,000 (0 where there is no score)."""
     import ee
 
-    # Clouds: s2cloudless probability above the threshold.
-    probability = ee.Image(img.get("s2cloudless")).select("probability")
-    clouds = probability.gt(p["cloud_probability_threshold"])
-
-    # Shadows: dark NIR pixels (not water) inside the projection of the clouds
-    # away from the sun (assumes a UTM projection).
-    not_water = img.select("SCL").neq(6)
-    dark = img.select("B8").lt(p["nir_dark_threshold"] * 1e4).multiply(not_water)
-    shadow_azimuth = ee.Number(90).subtract(ee.Number(img.get("MEAN_SOLAR_AZIMUTH_ANGLE")))
-    projection = (clouds.directionalDistanceTransform(shadow_azimuth, p["cloud_projection_distance"] * 10)
-                  .reproject(crs=img.select(0).projection(), scale=100)
-                  .select("distance")
-                  .mask())
-    shadows = projection.multiply(dark)
-
-    # Remove small patches and dilate by the buffer (at 20 m for speed).
-    mask = (clouds.add(shadows).gt(0)
-            .focalMin(2).focalMax(p["buffer"] * 2 / 20)
-            .reproject(crs=img.select([0]).projection(), scale=20)
-            .rename("cloudmask"))
-    return img.addBands(mask)
-
-
-def export_image(img):
-    """10 bands (0 outside the scene) and the mask (1 also where data are missing)."""
-    valid = img.select("B2").mask().And(img.select("cloudmask").mask())
-    cloudmask = img.select("cloudmask").unmask(1).Or(valid.Not()).rename("cloudmask")
-    return img.select(BANDS).unmask(0).toUint16().addBands(cloudmask.toUint16())
+    cs_cdf = ee.Image(img.get("cloud_score")).select("cs_cdf").multiply(10000).round().unmask(0).rename("cs_cdf")
+    return img.select(BANDS).unmask(0).toUint16().addBands(cs_cdf.toUint16())
 
 
 # ---------------------------------------------------------------------------
@@ -193,7 +169,7 @@ def _download_scene(image, grid: dict, out_path: Path) -> None:
     with rasterio.open(tmp_path, "w", **profile) as dst, ThreadPoolExecutor(WORKERS) as pool:
         for (col, row, width, height), data in pool.map(fetch, blocks):
             dst.write(data, window=Window(col, row, width, height))
-        for i, name in enumerate([*BANDS, "cloudmask"], start=1):
+        for i, name in enumerate([*BANDS, "cs_cdf"], start=1):
             dst.set_band_description(i, name)
     tmp_path.replace(out_path)
 
@@ -223,8 +199,7 @@ def download_s2(paths: dict, cfg: dict, rois, dates: list, project: str | None =
                 for scene_id in ids:
                     out_path = folder / f"{scene_id}.tif"
                     if not out_path.exists():
-                        image = export_image(add_cloud_mask(
-                            collection.filter(ee.Filter.eq("system:index", scene_id)).first(), p))
+                        image = export_image(collection.filter(ee.Filter.eq("system:index", scene_id)).first())
                         _download_scene(image, grid, out_path)
                 rows = pd.DataFrame({"roi": roi, "reference_date": ref.isoformat(), "window": t, "scene": ids,
                                      "cloudy_pixel_percentage": clouds, "cloud_filter": cloud_filter,

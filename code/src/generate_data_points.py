@@ -62,7 +62,8 @@ def load_polygons(paths: dict) -> dict:
 
     folder = paths["polygons_path"]
     layers = ["ROIs", "PMF_homogeneous", "PMF_exclusion", "PGH_homogeneous", "PGH_exclusion"]
-    return {name: gpd.read_file(folder / f"{name}.gpkg").to_crs(GRID_CRS) for name in layers}
+    # index = GeoPackage feature id (fid), the polygon number written to the CSVs (Polygon_ID)
+    return {name: gpd.read_file(folder / f"{name}.gpkg", fid_as_index=True).to_crs(GRID_CRS) for name in layers}
 
 
 def available_dates(paths: dict, rois: list) -> list:
@@ -178,15 +179,21 @@ def _in_region(region, inside: bool, x, y):
 
 
 def _random_points(x, y, half_size, region, inside, rng):
-    """A random point inside each pixel and inside (or outside) *region*; NaN if none found."""
+    """
+    A random point inside each pixel and inside (or outside) *region*; NaN if none found.
+
+    Offsets are drawn on a 1 mm grid at least 1 mm from the pixel edges, so the coordinates
+    written to the CSVs (rounded to 1 mm) fall in the same pixel as the values extracted.
+    """
     px = np.full(len(x), np.nan)
     py = np.full(len(y), np.nan)
     todo = np.arange(len(x))
+    steps = int(round(half_size * 1000)) - 1  # offsets in mm, strictly inside the pixel
     for _ in range(MAX_TRIES):
         if len(todo) == 0:
             break
-        cx = x[todo] + rng.uniform(-half_size, half_size, len(todo))
-        cy = y[todo] + rng.uniform(-half_size, half_size, len(todo))
+        cx = np.round(x[todo] + rng.integers(-steps, steps + 1, len(todo)) / 1000, 3)
+        cy = np.round(y[todo] + rng.integers(-steps, steps + 1, len(todo)) / 1000, 3)
         ok = _in_region(region, inside, cx, cy)
         px[todo[ok]], py[todo[ok]] = cx[ok], cy[ok]
         todo = todo[~ok]
@@ -283,8 +290,37 @@ def generate(paths: dict, cfg: dict, random_state: int = DEFAULT_RANDOM_STATE) -
                 summary.append({"set": set_name, "class": cls, "roi": roi, "reference_date": date.isoformat(),
                                 "eligible_pixels": len(pool[cls, roi, date]), "points": n})
 
+    for set_name, parts in tables.items():
+        tables[set_name] = [_polygon_ids(pd.concat(parts, ignore_index=True), layers)]
     _write(tables, composites, paths)
     return pd.DataFrame(summary)
+
+
+def _polygon_ids(points: pd.DataFrame, layers: dict) -> pd.DataFrame:
+    """
+    Polygon_ID: the number (GeoPackage fid) of the labelled polygon each PMF or PGH point
+    was drawn from, in the layer of its class (PMF_homogeneous: the polygon of the point's
+    reference date; PGH_homogeneous). Empty for "others". A polygon in one season is one
+    group for the tuning folds and the bootstrap (src.tuning.polygon_groups).
+    """
+    import geopandas as gpd
+
+    ids = pd.Series(pd.NA, index=points.index, dtype="Int64")
+    sources = {CLASSES["PMF"]: layers["PMF_homogeneous"], CLASSES["PGH"]: layers["PGH_homogeneous"]}
+    for code, polygons in sources.items():
+        polygons = polygons.assign(fid=polygons.index, poly_date=(
+            pd.to_datetime(polygons["reference_date"]).dt.date if code == CLASSES["PMF"] else None))
+        selected = points[points["Class"] == code]
+        pts = gpd.GeoDataFrame({"row": selected.index, "date": selected["Reference_Date"].to_numpy()},
+                               geometry=gpd.points_from_xy(selected["X"], selected["Y"]), crs=polygons.crs)
+        hits = gpd.sjoin(pts, polygons[["fid", "poly_date", "geometry"]].reset_index(drop=True), predicate="within")
+        if code == CLASSES["PMF"]:  # polygons of other seasons may overlap the same field
+            hits = hits[hits["date"] == hits["poly_date"]]
+        hits = hits.sort_values("fid").drop_duplicates("row")  # overlapping polygons: lowest number
+        missing = set(selected.index) - set(hits["row"])
+        assert not missing, f"{len(missing)} points of class {code} outside their polygons"
+        ids[hits["row"].to_numpy()] = hits["fid"].to_numpy()
+    return points.assign(Polygon_ID=ids)
 
 
 def _proportional(total: int, capacity: dict) -> dict:
@@ -307,10 +343,11 @@ def _write(tables: dict, composites: dict, paths: dict) -> None:
             frames = []
             for (roi, date), group in points.groupby(["ROI", "Reference_Date"], sort=False):
                 values = composites[sensor, roi, date].values(group["X"], group["Y"])
-                frames.append(pd.concat([group[["Class", "X", "Y", "Reference_Date"]].reset_index(), values], axis=1))
+                frames.append(pd.concat([group[["Class", "X", "Y", "Reference_Date", "Polygon_ID"]].reset_index(),
+                                         values], axis=1))
             table = pd.concat(frames).set_index("index").sort_index()
             table["Reference_Date"] = [d.isoformat() for d in table["Reference_Date"]]
-            assert not table.isna().any().any(), f"{sensor} {set_name}: missing values"
+            assert not table.drop(columns="Polygon_ID").isna().any().any(), f"{sensor} {set_name}: missing values"
             out = paths["datasets_path"] / f"{sensor}_{SETS[set_name]}.csv"
             table.round({"X": 3, "Y": 3}).to_csv(out, index=False)
             print(f"    [OK] {out.name}: {len(table)} points")

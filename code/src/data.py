@@ -7,6 +7,12 @@ Dataset loading utilities.
 import pandas as pd
 
 
+def _read(path) -> pd.DataFrame:
+    """One point table; rows with a missing value are dropped (Polygon_ID is empty for "others" by design)."""
+    df = pd.read_csv(path)
+    return df.dropna(subset=[c for c in df.columns if c != "Polygon_ID"])
+
+
 def load_datasets(paths: dict) -> dict:
     """
     Load the four CSV datasets from disk.
@@ -23,10 +29,10 @@ def load_datasets(paths: dict) -> dict:
     """
     datasets_path = paths["datasets_path"]
 
-    df_s2train = pd.read_csv(datasets_path / "S2_Training.csv").dropna()
-    df_s2val = pd.read_csv(datasets_path / "S2_Validation.csv").dropna()
-    df_psstrain = pd.read_csv(datasets_path / "PS_Training.csv").dropna()
-    df_pssval = pd.read_csv(datasets_path / "PS_Validation.csv").dropna()
+    df_s2train = _read(datasets_path / "S2_Training.csv")
+    df_s2val = _read(datasets_path / "S2_Validation.csv")
+    df_psstrain = _read(datasets_path / "PS_Training.csv")
+    df_pssval = _read(datasets_path / "PS_Validation.csv")
 
     return {
         "df_s2train": df_s2train,

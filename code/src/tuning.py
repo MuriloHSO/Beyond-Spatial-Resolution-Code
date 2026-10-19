@@ -12,11 +12,13 @@ so the validation set remains fully held out for the reported metrics.
 Training points are only a few metres apart, so neighbouring points often fall
 in the same pixel.  With random folds, near-duplicates end up on both sides of
 a split and the search favours configurations that memorise them.  The inner
-folds therefore split by spatial blocks (square grid cells of ``block_size``
-metres): all points of a block are in the same fold.
+folds are therefore grouped by labelled polygon and season: all points of a
+polygon on one reference date are in the same fold (``polygon_groups``).
 """
 
 import time
+
+import numpy as np
 
 from scipy.stats import loguniform, randint, uniform
 from sklearn.base import clone
@@ -79,11 +81,18 @@ SEARCH_SPACES = {
 # Tuning
 # ---------------------------------------------------------------------------
 
-def spatial_blocks(df, block_size: float):
-    """Label each point with the ``block_size`` x ``block_size`` m grid cell containing it."""
-    col = (df["X"] // block_size).astype(int).astype(str)
-    row = (df["Y"] // block_size).astype(int).astype(str)
-    return (col + "_" + row).to_numpy()
+def polygon_groups(df):
+    """
+    Group of each point for the tuning folds and the bootstrap: its labelled polygon on
+    its reference date (class, ``Polygon_ID``, ``Reference_Date``), or the point itself
+    for "others" (no polygon). The same field on another date is an independent group.
+    """
+    polygon = df["Polygon_ID"]
+    return np.where(
+        polygon.isna(),
+        "point-" + df.index.astype(str),
+        df["Class"].astype(str) + "-" + polygon.astype("Int64").astype(str) + "-" + df["Reference_Date"].astype(str),
+    )
 
 
 def tune_model(model_name, model, X_train, y_train, groups, tuning: dict, random_state: int = DEFAULT_RANDOM_STATE):
@@ -102,7 +111,7 @@ def tune_model(model_name, model, X_train, y_train, groups, tuning: dict, random
     X_train, y_train : array-like
         Raw (unscaled) training data.
     groups : array-like
-        Spatial block of each training point (see :func:`spatial_blocks`).
+        Group of each training point: polygon and season, or the point itself (see :func:`polygon_groups`).
     tuning : dict
         ``n_candidates``, ``factor`` and ``cv_folds`` settings.
     random_state : int

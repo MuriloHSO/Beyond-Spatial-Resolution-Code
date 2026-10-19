@@ -119,11 +119,9 @@ _FALLBACK_TUNING = {
     "n_candidates": 81,
     "factor": 3,
     "cv_folds": 5,
-    "block_size": 1000,
 }
 _FALLBACK_UNCERTAINTY = {
     "n_resamples": 2000,
-    "block_size": 1000,
     "confidence": 0.95,
 }
 _FALLBACK_EXPERIMENTS = [
@@ -380,14 +378,14 @@ def main(argv=None):
         print(
             f"  Tuning        : Successive Halving  ({tuning['n_candidates']} candidates, "
             f"factor {tuning['factor']}, {tuning['cv_folds']}-fold CV "
-            f"over {tuning['block_size']} m spatial blocks)"
+            f"grouped by labelled polygon and date)"
         )
     else:
         print("  Tuning        : disabled (default hyperparameters)")
     uncertainty = cfg["uncertainty"]
     print(
-        f"  Intervals     : {uncertainty['confidence']:.0%} class-stratified block bootstrap of the validation "
-        f"points ({uncertainty['n_resamples']} resamples, {uncertainty['block_size']} m blocks)"
+        f"  Intervals     : {uncertainty['confidence']:.0%} class-stratified bootstrap of the validation "
+        f"points by polygon ({uncertainty['n_resamples']} resamples)"
     )
     print(f"  Figures       : {'skipped' if cfg['skip_plots'] else 'enabled'}")
     data_generation = cfg["data_generation"]

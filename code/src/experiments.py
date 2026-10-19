@@ -9,7 +9,7 @@ import pandas as pd
 from .config import DEFAULT_RANDOM_STATE
 from .training import INTERNAL_COLUMNS, train_and_evaluate_model
 from .paths import get_image_lists
-from .tuning import spatial_blocks
+from .tuning import polygon_groups
 from .uncertainty import confusion_counts, interval, metrics_from_confusion, validation_resamples
 
 # Same band set of both sensors, for the paired S2 - PS differences.
@@ -46,7 +46,7 @@ PS_BANDS_ALL = [
 
 def _tuning_groups(df_train, tuning):
     if tuning and tuning.get("enabled", False):
-        return spatial_blocks(df_train, tuning["block_size"])
+        return polygon_groups(df_train)
     return None
 
 def _get_imagery(paths, sensor):
@@ -196,8 +196,8 @@ def run_all_experiments(
     random_state : int
         Seed for the hyperparameter search and the bootstrap resamples.
     uncertainty : dict
-        ``n_resamples``, ``block_size`` (m) and ``confidence`` of the class-stratified
-        block bootstrap of the validation points (see :mod:`src.uncertainty`).
+        ``n_resamples`` and ``confidence`` of the class-stratified bootstrap of the
+        validation points by polygon (see :mod:`src.uncertainty`).
 
     Returns
     -------
