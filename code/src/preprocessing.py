@@ -14,7 +14,9 @@ Reference dates are Jun-18 and Dec-15 of every year, the same for both sensors.
 
 Inputs (scenes kept locally, not in the repository):
     data/raw/PlanetScope/**/<YYYYMMDD>_*_AnalyticMS_SR_8b*.tif
-        8-band PlanetScope SuperDove surface reflectance, ordered from Planet.
+        8-band PlanetScope SuperDove surface reflectance, ordered from Planet
+        as individual scenes (PSScene, analytic_8b_sr_udm2 bundle), each with
+        its usable data mask <item>_3B_udm2*.tif in the same folder.
     data/raw/Sentinel-2/<ROI>/<scene>.tif
         10 S2 L2A bands + Cloud Score+ cs_cdf on the ROI grid,
         downloaded by src/download_s2_gee.py (offered here if missing).
@@ -28,8 +30,9 @@ Output:
 
 Within a window, scenes acquired on the same day are averaged first (overlapping
 strips or tiles), then the daily images are averaged, so every day has the same
-weight. S2 pixels flagged by the cloud/shadow mask are excluded; PS has no cloud
-mask (only clear scenes are ordered).
+weight. Each pixel is averaged over the scenes that observe it, so scenes that
+cover only part of the ROI fill one another's gaps. Cloudy pixels are excluded:
+S2 by Cloud Score+ (cs_cdf), PS by the UDM2 'clear' band.
 
 Run from the code folder:  python -m src.preprocessing
 """
@@ -64,6 +67,7 @@ SENSORS = {
 }
 
 PS_PATTERN = "*_AnalyticMS_SR_8b*.tif"
+UDM2_CLEAR_BAND = 1  # UDM2 band 1: clear (1) or not (0)
 
 DEFAULTS = {
     "first_year": 2020,
@@ -164,10 +168,17 @@ def _intersects(a, b) -> bool:
     return a[0] < b[2] and a[2] > b[0] and a[1] < b[3] and a[3] > b[1]
 
 
+def udm2_path(scene: Path) -> Path:
+    """UDM2 file of a PS scene (Planet names: <item>_3B_AnalyticMS_SR_8b[_clip].tif -> <item>_3B_udm2[_clip].tif)."""
+    return scene.with_name(re.sub(r"_AnalyticMS_SR_8b", "_udm2", scene.name))
+
+
 def find_ps_scenes(paths: dict) -> pd.DataFrame:
     """Every 8-band PS scene under data/raw/PlanetScope, with date and bounds."""
     rows = []
     for path in sorted(paths["PS_raw"].rglob(PS_PATTERN)):
+        if not udm2_path(path).exists():
+            raise FileNotFoundError(f"UDM2 mask {udm2_path(path).name} of {path.name} not found")
         with rasterio.open(path) as src:
             if src.count != len(SENSORS["PS"]["bands"]):
                 raise ValueError(f"{path.name} has {src.count} bands; 8-band SuperDove scenes are required")
@@ -231,7 +242,8 @@ def _window_mean(scenes: pd.DataFrame, sensor: str, band_index: int, grid: dict,
                  cs_cdf_threshold: float | None = None) -> np.ndarray:
     """
     Mean of one band over the days of a window (NaN where no valid observation).
-    S2 pixels count only where Cloud Score+ cs_cdf (last band, x 10,000) >= *cs_cdf_threshold*.
+    S2 pixels count only where Cloud Score+ cs_cdf (last band, x 10,000) >= *cs_cdf_threshold*;
+    PS pixels only where the scene's UDM2 marks them clear.
     """
     shape = (grid["height"], grid["width"])
     window_sum = np.zeros(shape, dtype=np.float64)
@@ -247,6 +259,9 @@ def _window_mean(scenes: pd.DataFrame, sensor: str, band_index: int, grid: dict,
                 if sensor == "S2":
                     cs_cdf = _read_on_grid(src, src.count, grid)  # last band
                     valid &= cs_cdf >= round(cs_cdf_threshold * 10000)
+            if sensor == "PS":
+                with rasterio.open(udm2_path(path)) as udm:
+                    valid &= _read_on_grid(udm, UDM2_CLEAR_BAND, grid) == 1
             day_sum[valid] += values[valid]
             day_n[valid] += 1
         observed = day_n > 0
@@ -358,6 +373,8 @@ def build_all(paths: dict, cfg: dict, overwrite: bool = False) -> pd.DataFrame:
                 tags = {
                     "SENSOR": sensor, "ROI": roi, "REFERENCE_DATE": ref.isoformat(),
                     "WINDOWS_DAYS": str(cfg["windows"]),
+                    "CLOUD_MASK": ("UDM2 clear" if sensor == "PS" else
+                                   f"Cloud Score+ cs_cdf >= {cfg['sentinel2']['cs_cdf_threshold']}"),
                     **{f"SCENES_T{t}": ";".join(p.name for p in w["path"]) for t, w in enumerate(by_window)},
                 }
                 missing = build_composite(by_window, sensor, grid, out_path, tags,
