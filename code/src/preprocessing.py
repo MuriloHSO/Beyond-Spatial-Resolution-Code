@@ -70,8 +70,8 @@ PS_PATTERN = "*_AnalyticMS_SR_8b*.tif"
 UDM2_CLEAR_BAND = 1  # UDM2 band 1: clear (1) or not (0)
 
 DEFAULTS = {
-    "first_year": 2020,
-    "last_year": 2022,
+    "first_year": 2021,
+    "last_year": 2023,
     "windows": [[-30, 0], [30, 60], [100, 130]],
     "training_points": 12000,
     "validation_points": 4000,
@@ -174,7 +174,11 @@ def udm2_path(scene: Path) -> Path:
 
 
 def find_ps_scenes(paths: dict) -> pd.DataFrame:
-    """Every 8-band PS scene under data/raw/PlanetScope, with date and bounds."""
+    """
+    Every 8-band PS scene under data/raw/PlanetScope, with date and bounds. A scene
+    delivered twice with the same clip (same file name and bounds) is counted once;
+    clips of the same scene for different ROIs are kept.
+    """
     rows = []
     for path in sorted(paths["PS_raw"].rglob(PS_PATTERN)):
         if not udm2_path(path).exists():
@@ -183,7 +187,9 @@ def find_ps_scenes(paths: dict) -> pd.DataFrame:
             if src.count != len(SENSORS["PS"]["bands"]):
                 raise ValueError(f"{path.name} has {src.count} bands; 8-band SuperDove scenes are required")
             rows.append({"path": path, "date": _scene_date(path), "bounds": _bounds_in_grid_crs(src)})
-    return pd.DataFrame(rows, columns=["path", "date", "bounds"])
+    scenes = pd.DataFrame(rows, columns=["path", "date", "bounds"])
+    same_clip = pd.DataFrame({"name": [p.name for p in scenes["path"]], "bounds": scenes["bounds"]}).duplicated()
+    return scenes[~same_clip.values].reset_index(drop=True)
 
 
 def find_s2_scenes(paths: dict, roi: str) -> pd.DataFrame:

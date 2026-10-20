@@ -110,10 +110,10 @@ confidence = 0.95
 [data_generation]
 preprocess = false
 generate_points = false
-first_year = 2020
-last_year = 2022
+first_year = 2021
+last_year = 2023
 windows = [[-30, 0], [30, 60], [100, 130]]
-training_points = 9500
+training_points = 12000
 validation_points = 4000
 
 # Sentinel-2 scene filter and Cloud Score+ mask.

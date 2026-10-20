@@ -21,7 +21,7 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
     - `plotting.py` — all figure-generation functions
 
 `data/` - input data directory (mirrors Code Ocean's `/data`):
-- CSV training and validation datasets (included in the repository). The `Class` column holds the class code of each point; the task is a single three-class problem (plastic-mulched farmland, plastic greenhouses and others) solved by one multiclass model per experiment.
+- CSV training and validation datasets (included in the repository). The `Class` column holds the class code of each point (0 = plastic-mulched farmland, PMF; 1 = plastic greenhouses, PGH; 2 = others); the task is a single three-class problem (plastic-mulched farmland, plastic greenhouses and others) solved by one multiclass model per experiment.
 - `Imagery/` — GeoTIFF imagery from [Hugging Face](https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code) (not included; about 8.4 GB). `run.py` downloads it when full-image classification is enabled; to download it alone, run `python -m src.download` from the `code` folder.
 
 `results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
