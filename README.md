@@ -63,22 +63,22 @@ All user-facing settings live in [`code/config.toml`](code/config.toml):
 | Key | Description |
 |-----|-------------|
 | `random_state` | Single integer seed for the classifiers, cross-validation splits and hyperparameter search (default 2025) |
-| `models` | List of models to run (empty list = all seven) |
-| `skip_plots` | Set to `true` to skip figure generation |
-| `apply_model_on_image` | `true` to classify the full satellite image in every experiment; `false` to skip (faster) |
+| `data_generation.preprocess` | `true` to build the composites from the raw scenes (also `--preprocess`; default `false`) |
+| `data_generation.generate_points` | `true` to regenerate the four CSVs from the polygons and composites (also `--generate-points`; default `false`) |
+| `data_generation.first_year`, `last_year` | Reference dates are Jun-18 and Dec-15 of every year in this range |
+| `data_generation.windows` | Start and end (exclusive) of the t0, t1, t2 windows, in days from the reference date |
+| `data_generation.training_points`, `validation_points` | Points per class in each set |
+| `data_generation.sentinel2.*` | S2 scene cloud filter (per window, from 20 % rising by 10 % until 3 days cover the ROI) and Cloud Score+ clear threshold (`cs_cdf_threshold`) |
 | `experiments` | List of experiment names to run |
-| `[tuning] enabled` | `true` to tune every model's hyperparameters before evaluation; `false` to use scikit-learn defaults (also `--no-tuning`) |
-| `[tuning] n_candidates` | Random hyperparameter configurations sampled per model |
-| `[tuning] factor` | Successive Halving elimination rate between rounds |
-| `[tuning] cv_folds` | Inner stratified CV folds used to score each configuration |
-| `[uncertainty] n_resamples` | Bootstrap resamples for the confidence intervals of the validation metrics |
-| `[uncertainty] confidence` | Coverage of the percentile confidence intervals |
-| `[data_generation] preprocess` | `true` to build the composites from the raw scenes (also `--preprocess`; default `false`) |
-| `[data_generation] generate_points` | `true` to regenerate the four CSVs from the polygons and composites (also `--generate-points`; default `false`) |
-| `[data_generation] first_year`, `last_year` | Reference dates are Jun-18 and Dec-15 of every year in this range |
-| `[data_generation] windows` | Start and end (exclusive) of the t0, t1, t2 windows, in days from the reference date |
-| `[data_generation] training_points`, `validation_points` | Points per class in each set |
-| `[data_generation.sentinel2]` | S2 scene cloud filter (per window, from 20 % rising by 10 % until 3 days cover the ROI) and Cloud Score+ clear threshold (`cs_cdf_threshold`) |
+| `models` | List of models to run (empty list = all seven) |
+| `tuning.enabled` | `true` to tune every model's hyperparameters before evaluation; `false` to use scikit-learn defaults (also `--no-tuning`) |
+| `tuning.n_candidates` | Random hyperparameter configurations sampled per model |
+| `tuning.factor` | Successive Halving elimination rate between rounds |
+| `tuning.cv_folds` | Inner stratified CV folds used to score each configuration |
+| `apply_model_on_image` | `true` to classify the full satellite image in every experiment; `false` to skip (faster) |
+| `uncertainty.n_resamples` | Bootstrap resamples for the confidence intervals of the validation metrics |
+| `uncertainty.confidence` | Coverage of the percentile confidence intervals |
+| `skip_plots` | Set to `true` to skip figure generation |
 
 Valid model names: `CART`, `KNN`, `MLP`, `RF`, `SGDC`, `LinearSVC`, `SVC_rbf`  
 Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`
