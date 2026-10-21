@@ -3,7 +3,7 @@ run.py
 │
 ├── parse config.toml
 ├── setup_paths()
-├── ensure_imagery()
+├── ensure_composites()
 ├── load_datasets()
 ├── run_all_experiments()
 ├── generate_figures()
@@ -277,11 +277,11 @@ def resolve_base_path():
 
     Code Ocean mounts:
       /code    — the capsule code directory (repo root)
-      /data    — input datasets and imagery
+      /data    — input datasets, composites and raw data
       /results — output directory
 
     Local layout mirrors Code Ocean conventions:
-      <repo>/data/    — CSVs and Imagery/ subfolder
+      <repo>/data/    — CSVs and the composites/, raw/ and polygons/ subfolders
       <repo>/results/ — output directory
     """
     code_ocean_data    = Path("../data")
@@ -430,7 +430,7 @@ def main(argv=None):
 
     from src.config import CLASS_NAMES, build_models
     from src.paths import setup_paths
-    from src.download import ensure_imagery
+    from src.download import ensure_composites
     from src.data import load_datasets, sample_counts
     from src.experiments import results_filename, run_all_experiments
     from src.plotting import (
@@ -448,6 +448,17 @@ def main(argv=None):
     # Override dataset/results paths when running on Code Ocean
     if datasets_dir != base / "data":
         paths["datasets_path"] = datasets_dir
+        data = datasets_dir.resolve()
+        paths.update({
+            "data_path": data,
+            "raw_path": data / "raw",
+            "PS_raw": data / "raw" / "PlanetScope",
+            "S2_raw": data / "raw" / "Sentinel-2",
+            "polygons_path": data / "polygons",
+            "composites_path": data / "composites",
+            "PS_composites": data / "composites" / "PlanetScope",
+            "S2_composites": data / "composites" / "Sentinel-2",
+        })
         paths["results_path"]  = results_dir
         paths["figures_path"]  = results_dir / "figures"
         paths["maps_path"]     = results_dir / "maps"
@@ -457,11 +468,11 @@ def main(argv=None):
         if Path("/scratch").exists():  # Code Ocean's temporary folder
             paths["scratch_path"] = Path("/scratch")
 
-    # Ensure imagery is available only if any experiment requires image classification
+    # Ensure the composites are available only if any experiment requires image classification
     if any_img:
-        ensure_imagery(paths)
+        ensure_composites(paths)
     else:
-        print("[OK] Full-image classification disabled. Skipping imagery download.")
+        print("[OK] Full-image classification disabled. Skipping composites download.")
 
     step = 0
 

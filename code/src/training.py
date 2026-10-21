@@ -32,6 +32,9 @@ from .tuning import tune_model
 # Breakdown of the training time, kept out of results/ (written to scratch/ by the dispatcher).
 INTERNAL_COLUMNS = ["Tuning Time (s)", "Final Fit Time (s)", "Tuning CV OA"]
 
+# Red, green and blue bands at t0 of each sensor's composite, for the image preview.
+RGB_BANDS = {"S2": ["B4_0", "B3_0", "B2_0"], "PS": ["B6_0", "B4_0", "B2_0"]}
+
 
 def train_and_evaluate_model(
     X_train,
@@ -112,21 +115,20 @@ def train_and_evaluate_model(
             print(f"    [!]  No imagery file found for '{name}' - image classification skipped.")
             apply_model_on_image = False
         else:
-            # Load image only when explicit image classification is requested
+            # Load image only when explicit image classification is requested.
+            # Composite bands are named like the dataset columns (e.g. B8_1), so the
+            # model's features are read by name, in the training order.
             with rasterio.open(imagery) as src:
-                image = src.read()
+                bands = list(src.descriptions)
+                image = src.read([bands.index(column) + 1 for column in X_train.columns])
+                rgb = src.read([bands.index(band) + 1 for band in RGB_BANDS[filename[:2].upper()]])
                 meta = src.meta
 
-            img = (image / 10000 * 255 * 1.4).astype(np.uint8)
+            img = np.clip(rgb / 10000 * 255 * 1.4, 0, 255).astype(np.uint8)
 
-            # Save original image
+            # Save original image (true colour at t0)
             plt.figure(figsize=(16, 16))
-            try:
-                # Use bands 2, 1, 0 (RGB) for visualization
-                plt.imshow(np.dstack((img[2], img[1], img[0])))
-            except Exception:
-                # Fallback if fewer bands are available
-                plt.imshow(img[0])
+            plt.imshow(np.dstack(img))
             plt.axis("off")
             plt.savefig(
                 results_path / f"original_{filename}.png",
@@ -139,14 +141,8 @@ def train_and_evaluate_model(
             # Reshape image
             image_reshaped = image.reshape(image.shape[0], -1).T
 
-            # Band selection based on satellite type
-            if filename[:2] == "S2" and X_train.shape[1] == 12:
-                image_reshaped = image_reshaped[:, [0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 23]]
-            elif filename[:2] == "PS" and X_train.shape[1] == 12:
-                image_reshaped = image_reshaped[:, [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23]]
-
-            # Imputation
-            imputer = SimpleImputer(strategy="mean")
+            # Imputation: pixels without a clear observation in a window are 0 (nodata)
+            imputer = SimpleImputer(missing_values=0, strategy="mean")
             image_imputed = imputer.fit_transform(image_reshaped)
 
             # Normalize only necessary part

@@ -43,9 +43,10 @@ experiments = [
 
 # -----------------------------------------------------------------------------
 # apply_model_on_image : if true, every experiment will also classify the
-#                        full satellite image (requires imagery files in
-#                        Imagery/). Set to false for a faster run without
-#                        image classification.
+#                        full composite of the first ROI and reference date
+#                        of each sensor (data/composites/, downloaded by
+#                        src/download.py if missing). Set to false for a
+#                        faster run without image classification.
 
 apply_model_on_image = false
 

@@ -22,7 +22,9 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 
 `data/` - input data directory (mirrors Code Ocean's `/data`):
 - CSV training and validation datasets (included in the repository). The `Class` column holds the class code of each point (0 = plastic-mulched farmland, PMF; 1 = plastic greenhouses, PGH; 2 = others); the task is a single three-class problem (plastic-mulched farmland, plastic greenhouses and others) solved by one multiclass model per experiment.
-- `Imagery/` — GeoTIFF imagery from [Hugging Face](https://huggingface.co/datasets/MuriloHSO/Beyond-Spatial-Resolution-Code) (not included; about 8.4 GB). `run.py` downloads it when full-image classification is enabled; to download it alone, run `python -m src.download` from the `code` folder.
+- `composites/Sentinel-2/` — the S2 3-time-series composites (GeoTIFF, one per ROI and reference date) from the [Hugging Face dataset](https://huggingface.co/datasets/marlonfs/agricultural-plastic-PS-S2) (not included; about 0.9 GB). Full-image classification uses them; `run.py` downloads them into an empty folder when it is enabled, and `python -m src.download` from the `code` folder downloads them alone.
+- `composites/PlanetScope/` — the PS composites are **not distributed**: the scenes were obtained through Planet's Education and Research Program, whose terms do not allow sharing products that retain Planet's image data. Build them from your own Planet orders with `python -m src.preprocessing PS`; the instructions and the list of scenes used (`PS_scenes.csv`) are in [`data/composites/PlanetScope/README.md`](data/composites/PlanetScope/README.md). Without them, PS full-image classification is skipped; the point tables already hold the PS values used in the paper.
+- `raw/PlanetScope/`, `raw/Sentinel-2/`, `polygons/` — raw scenes and reference polygons, needed only to rebuild the composites and the CSVs (see Data generation).
 
 `results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
 - Classification maps (PNG and TIFF), metric tables, and figures
@@ -53,7 +55,7 @@ pip install -r code/requirements.txt
 cd code
 python run.py
 ```
-5. The repository is structured for a quick run. To run the complete experiment, including testing all models, downloading imagery from Hugging Face, and inferencing images to determine inference speed (IS), alter the configuration in `config.toml`.
+5. The repository is structured for a quick run. To run the complete experiment, including testing all models, downloading the composites from Hugging Face, and inferencing images to determine inference speed (IS), alter the configuration in `config.toml`.
 
 ## Configuration (`config.toml`)
 All user-facing settings live in [`code/config.toml`](code/config.toml):
@@ -85,7 +87,7 @@ Valid experiment names: `S2_4b`, `S2_Allb`, `PS_4b`, `PS_Allb`
 The CSVs in `data/` can be rebuilt from raw scenes and reference polygons. These steps are off by default and need the packages in `code/requirements-data.txt`:
 
 1. Place the reference polygons (`polygons/*.gpkg` of the Hugging Face dataset) in `data/polygons/`.
-2. Place the 8-band PlanetScope surface reflectance scenes (`*_AnalyticMS_SR_8b*.tif`, ordered from Planet as individual PSScene items with the `analytic_8b_sr_udm2` bundle, without the composite tool) anywhere under `data/raw/PlanetScope/`, each next to its UDM2 mask (`*_udm2*.tif`). The file name must start with the acquisition date (`YYYYMMDD`), as in Planet's naming. Pixels that UDM2 does not mark as clear are left out of the means.
+2. Place the 8-band PlanetScope surface reflectance scenes, ordered with your own Planet account (scene list and order settings in `data/composites/PlanetScope/README.md`) (`*_AnalyticMS_SR_8b*.tif`, ordered from Planet as individual PSScene items with the `analytic_8b_sr_udm2` bundle, without the composite tool) anywhere under `data/raw/PlanetScope/`, each next to its UDM2 mask (`*_udm2*.tif`). The file name must start with the acquisition date (`YYYYMMDD`), as in Planet's naming. Pixels that UDM2 does not mark as clear are left out of the means.
 3. Run `python run.py --preprocess --generate-points` from `code/` (or set the switches in `config.toml`). A reference date is used when every window of every ROI has PlanetScope scenes. Missing Sentinel-2 scenes are downloaded from Google Earth Engine after confirmation (`python -m src.download_s2_gee` does it alone); this needs an Earth Engine account, with the Cloud project id in the `EE_PROJECT` environment variable or typed when asked.
 
 Composites are written to `data/composites/` and the four CSVs in `data/` are replaced; they gain the columns `Reference_Date` and `Polygon_ID` (the number, GeoPackage `fid`, of the labelled polygon a PMF or PGH point was drawn from, in the layer of its class; empty for "others"). Each CSV row is a random point inside one 10 m S2 pixel (one point per pixel and reference date) whose values come from the S2 pixel and from the 3 m PS pixel at the point.
@@ -101,6 +103,10 @@ Tuning uses only the training set; the validation set is never seen during the s
 
 ## Confidence intervals
 Error bars and intervals describe the uncertainty of the validation metrics. Points of the same labelled polygon on one date are a few metres apart and not independent, so they are resampled together: a class-stratified bootstrap (`src/uncertainty.py`) draws, for each class, its polygons (one per date) and single "others" points with replacement, 2,000 times, and reports 95 % percentile intervals. The same resamples serve every model and experiment, so the S2 − PS differences get paired intervals.
+
+## Licences
+- Code: MIT (`code/LICENSE`).
+- Data in `data/` (point CSVs) and the [Hugging Face dataset](https://huggingface.co/datasets/marlonfs/agricultural-plastic-PS-S2) (S2 composites, polygons, point CSVs): CC BY-NC 4.0 (`data/LICENSE`), for noncommercial use. Contains modified Copernicus Sentinel data 2021–2023. PlanetScope values in the point CSVs: © 2021–2023 Planet Labs PBC, obtained through Planet's Education and Research Program. The PlanetScope scenes and composites are not redistributed (see `data/composites/PlanetScope/README.md`).
 
 ## Declaration of AI-assisted coding
 We refactored the original notebook (.ipynb) code initially used for the paper into a version that meets Code Ocean's reproducibility requirements, using the free versions of Gemini 2.0 and GitHub Copilot (from June/July 2026).

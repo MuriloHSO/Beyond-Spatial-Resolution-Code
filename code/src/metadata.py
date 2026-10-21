@@ -156,15 +156,15 @@ def write_metadata(
 
     datasets = {}
 
-    if "S2_imagery" in paths:
-        datasets["Sentinel2_images"] = _count_files(
-            Path(paths["S2_imagery"]),
+    if "S2_composites" in paths:
+        datasets["Sentinel2_composites"] = _count_files(
+            Path(paths["S2_composites"]),
             "*.tif",
         )
 
-    if "PS_imagery" in paths:
-        datasets["PlanetScope_images"] = _count_files(
-            Path(paths["PS_imagery"]),
+    if "PS_composites" in paths:
+        datasets["PlanetScope_composites"] = _count_files(
+            Path(paths["PS_composites"]),
             "*.tif",
         )
 

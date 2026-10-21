@@ -37,13 +37,8 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
     datasets_path = data_path
 
-    images_path = data_path / "Imagery"
-
-    S2_imagery = images_path / "S2"
-
-    PS_imagery = images_path / "PS"
-
     # Data generation (complete run): raw scenes, reference polygons and composites
+    # (the composites are also downloaded by src.download for full-image classification)
     raw_path = data_path / "raw"
 
     PS_raw = raw_path / "PlanetScope"
@@ -88,9 +83,8 @@ def setup_paths(base: Path | str | None = None) -> dict:
     directories = [
         data_path,
         datasets_path,
-        images_path,
-        S2_imagery,
-        PS_imagery,
+        S2_composites,
+        PS_composites,
         results_path,
         figures_path,
         maps_path,
@@ -110,10 +104,6 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
         "data_path": data_path,
         "datasets_path": datasets_path,
-
-        "images_path": images_path,
-        "S2_imagery": S2_imagery,
-        "PS_imagery": PS_imagery,
 
         "raw_path": raw_path,
         "PS_raw": PS_raw,
@@ -143,7 +133,7 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
 def get_image_lists(paths: dict) -> dict:
     """
-    Return the imagery currently available on disk.
+    Return the composites currently available on disk (data/composites/<sensor folder>).
 
     Returns
     -------
@@ -156,8 +146,8 @@ def get_image_lists(paths: dict) -> dict:
     """
 
     return {
-        "S2": sorted(paths["S2_imagery"].glob("*.tif")),
-        "PS": sorted(paths["PS_imagery"].glob("*.tif")),
+        "S2": sorted(paths["S2_composites"].glob("S2_*.tif")),
+        "PS": sorted(paths["PS_composites"].glob("PS_*.tif")),
     }
 
 

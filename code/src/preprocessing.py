@@ -34,7 +34,7 @@ weight. Each pixel is averaged over the scenes that observe it, so scenes that
 cover only part of the ROI fill one another's gaps. Cloudy pixels are excluded:
 S2 by Cloud Score+ (cs_cdf), PS by the UDM2 'clear' band.
 
-Run from the code folder:  python -m src.preprocessing
+Run from the code folder:  python -m src.preprocessing [PS] [S2] [--overwrite]
 """
 
 import datetime as dt
@@ -345,8 +345,11 @@ def plan(paths: dict, cfg: dict) -> pd.DataFrame:
     return table
 
 
-def build_all(paths: dict, cfg: dict, overwrite: bool = False) -> pd.DataFrame:
-    """Build every PS and S2 composite of the reference dates with PS scenes."""
+def build_all(paths: dict, cfg: dict, overwrite: bool = False, sensors=("PS", "S2")) -> pd.DataFrame:
+    """
+    Build the composites of *sensors* for every reference date with PS scenes.
+    With sensors=("PS",), no Sentinel-2 scene or Earth Engine account is needed.
+    """
     table = plan(paths, cfg)
     dates = sorted(table.loc[table["complete"], "reference_date"].unique())
     skipped = sorted(set(table["reference_date"]) - set(dates))
@@ -358,15 +361,16 @@ def build_all(paths: dict, cfg: dict, overwrite: bool = False) -> pd.DataFrame:
         raise RuntimeError(f"No PlanetScope scenes ({PS_PATTERN}) found in {paths['PS_raw']}")
 
     rois = load_rois(paths)
-    _ensure_s2_scenes(paths, cfg, rois, dates)
+    if "S2" in sensors:
+        _ensure_s2_scenes(paths, cfg, rois, dates)
 
     ps = find_ps_scenes(paths)
     report = []
     for ref in dates:
         windows = window_ranges(ref, cfg["windows"])
         for roi, geom in rois.geometry.items():
-            s2 = find_s2_scenes(paths, roi)
-            for sensor, scenes in (("PS", ps), ("S2", s2)):
+            s2 = find_s2_scenes(paths, roi) if "S2" in sensors else None
+            for sensor, scenes in [(s, x) for s, x in (("PS", ps), ("S2", s2)) if s in sensors]:
                 out_path = composite_path(paths, sensor, roi, ref)
                 by_window = [scenes_in_window(scenes, start, end, geom.bounds) for start, end in windows]
                 if out_path.exists() and not overwrite:
@@ -419,8 +423,15 @@ def _ensure_s2_scenes(paths: dict, cfg: dict, rois, dates: list) -> None:
 
 
 if __name__ == "__main__":
+    import argparse
+
     from src.paths import setup_paths
 
+    parser = argparse.ArgumentParser(description="Build the PS and S2 composites (python -m src.preprocessing [PS] [S2]).")
+    parser.add_argument("sensors", nargs="*", choices=["PS", "S2"], default=["PS", "S2"])
+    parser.add_argument("--overwrite", action="store_true", help="rebuild composites that already exist")
+    args = parser.parse_args()
     base = Path(__file__).resolve().parents[2]
-    report = build_all(setup_paths(base=base), read_settings(base / "code" / "config.toml"))
+    report = build_all(setup_paths(base=base), read_settings(base / "code" / "config.toml"),
+                       overwrite=args.overwrite, sensors=tuple(args.sensors))
     print(report.to_string(index=False))
