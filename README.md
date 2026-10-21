@@ -109,6 +109,7 @@ Error bars and intervals describe the uncertainty of the validation metrics. Poi
 - Data in `data/` (point CSVs) and the [Hugging Face dataset](https://huggingface.co/datasets/marlonfs/agricultural-plastic-PS-S2) (S2 composites, polygons, point CSVs): CC BY-NC 4.0 (`data/LICENSE`), for noncommercial use. Contains modified Copernicus Sentinel data 2021–2023. PlanetScope values in the point CSVs: © 2021–2023 Planet Labs PBC, obtained through Planet's Education and Research Program. The PlanetScope scenes and composites are not redistributed (see `data/composites/PlanetScope/README.md`).
 
 ## Declaration of AI-assisted coding
-We refactored the original notebook (.ipynb) code initially used for the paper into a version that meets Code Ocean's reproducibility requirements, using the free versions of Gemini 2.0 and GitHub Copilot (from June/July 2026).
+- Version 1: we refactored the original notebook (.ipynb) code initially used for the paper into a version that meets Code Ocean's reproducibility requirements, using the free versions of Gemini 2.0 and GitHub Copilot (from June/July 2026).
+- Version 2: during the revision of the paper (October 2026), we used Claude Code (Anthropic) to implement the hyperparameter tuning with spatially grouped cross-validation, the bootstrap confidence intervals and the data-generation pipeline (Sentinel-2 download from Google Earth Engine with Cloud Score+ masking, PlanetScope composites and point sampling), to organise the settings in `config.toml`, to write the documentation and to check the consistency of code, data and results. The authors specified, reviewed and tested every change and take full responsibility for the code.
 
 

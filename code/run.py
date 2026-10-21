@@ -25,21 +25,21 @@ Options
                                 (default: config.toml next to this script)
     --random-state INT          Random seed for the classifiers, CV splits and
                                 hyperparameter search
-    --models MODEL [MODEL ...]  Models to run; omit to use config.toml value.
-                                Valid: CART KNN MLP RF SGDC LinearSVC SVC_rbf
+    --preprocess                Build the PS and S2 composites from the raw
+                                scenes in data/raw/ (complete run)
+    --generate-points           Regenerate the training/validation CSVs from
+                                the polygons and composites (complete run)
     --experiments EXP [EXP ...] Experiments to run; omit to use config.toml.
                                 Valid: S2_4b S2_Allb PS_4b PS_Allb
+    --models MODEL [MODEL ...]  Models to run; omit to use config.toml value.
+                                Valid: CART KNN MLP RF SGDC LinearSVC SVC_rbf
+    --no-tuning                 Use default hyperparameters (skip the
+                                Successive Halving search in config.toml)
     --apply-on-image            Force full-image classification for every
                                 experiment (overrides config.toml per-entry flag)
     --no-image                  Disable full-image classification for every
                                 experiment (overrides config.toml per-entry flag)
     --skip-plots                Do not generate figures after the experiments.
-    --no-tuning                 Use default hyperparameters (skip the
-                                Successive Halving search in config.toml)
-    --preprocess                Build the PS and S2 composites from the raw
-                                scenes in data/raw/ (complete run)
-    --generate-points           Regenerate the training/validation CSVs from
-                                the polygons and composites (complete run)
 """
 
 import os
@@ -150,12 +150,24 @@ def parse_args(argv=None):
         help="Random seed for the classifiers, CV splits and hyperparameter search.",
     )
     parser.add_argument(
-        "--models", nargs="+", choices=ALL_MODELS, default=None,
-        help="Subset of models to run. Omit to use config.toml value.",
+        "--preprocess", action="store_true", default=False,
+        help="Build the PS and S2 composites from the raw scenes in data/raw/ (complete run).",
+    )
+    parser.add_argument(
+        "--generate-points", action="store_true", default=False,
+        help="Regenerate data/{PS,S2}_{Training,Validation}.csv from the polygons and composites (complete run).",
     )
     parser.add_argument(
         "--experiments", nargs="+", choices=ALL_EXPERIMENTS, default=None,
         help="Subset of experiments to run. Omit to use config.toml value.",
+    )
+    parser.add_argument(
+        "--models", nargs="+", choices=ALL_MODELS, default=None,
+        help="Subset of models to run. Omit to use config.toml value.",
+    )
+    parser.add_argument(
+        "--no-tuning", action="store_true", default=False,
+        help="Use default hyperparameters instead of the Successive Halving search.",
     )
 
     # Mutually exclusive image-classification overrides
@@ -172,18 +184,6 @@ def parse_args(argv=None):
     parser.add_argument(
         "--skip-plots", action="store_true", default=False,
         help="Skip figure generation after the experiments.",
-    )
-    parser.add_argument(
-        "--no-tuning", action="store_true", default=False,
-        help="Use default hyperparameters instead of the Successive Halving search.",
-    )
-    parser.add_argument(
-        "--preprocess", action="store_true", default=False,
-        help="Build the PS and S2 composites from the raw scenes in data/raw/ (complete run).",
-    )
-    parser.add_argument(
-        "--generate-points", action="store_true", default=False,
-        help="Regenerate data/{PS,S2}_{Training,Validation}.csv from the polygons and composites (complete run).",
     )
 
     return parser.parse_args(argv)
