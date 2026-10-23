@@ -23,3 +23,6 @@ data\.cache\huggingface
 
 # Fitted models (pickle-based, version-bound): kept locally and on Code Ocean; the JSON records are tracked
 results/Models/*.joblib
+
+# Ignore results maps
+results/maps/

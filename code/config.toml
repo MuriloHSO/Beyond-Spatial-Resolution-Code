@@ -92,8 +92,7 @@ models = [
 #                points of a labelled polygon on one date (Polygon_ID and
 #                Reference_Date) stay in the same fold, so neighbouring
 #                (near-duplicate) points never sit on both sides of a split.
-# Search spaces are defined in src/tuning.py.  Tuned results are saved to
-# results/model_results_tuned.csv (model_results.csv keeps the defaults).
+# Search spaces are defined in src/tuning.py.
 
 tuning.enabled = true
 tuning.n_candidates = 81
@@ -102,12 +101,15 @@ tuning.cv_folds = 5
 
 # -----------------------------------------------------------------------------
 # apply_model_on_image : if true, every experiment will also classify the
-#                        full composite of the first ROI and reference date
-#                        of each sensor (data/composites/, downloaded by
-#                        src/download.py if missing). Set to false for a
-#                        faster run without image classification.
+#                        full composite of each sensor for the ROI and
+#                        reference date in `image` (data/composites/,
+#                        downloaded by src/download.py if missing). Set to
+#                        false for a faster run without image classification.
+# image                : ROI and reference date of that composite, as in its
+#                        file name (<sensor>_<image>.tif).
 
 apply_model_on_image = false
+image = "Holambra_2022-12-15"
 
 # -----------------------------------------------------------------------------
 # Confidence intervals of the validation metrics (error bars)

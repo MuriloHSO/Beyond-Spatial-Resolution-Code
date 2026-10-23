@@ -29,14 +29,14 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 `results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
 - Classification maps (PNG and TIFF), metric tables, and figures
 - `sample_counts.csv` — number of training and validation points per sensor and class
-- `model_results_tuned.csv` — OA, Cohen's kappa and macro F1 on the validation set with their 95 % confidence intervals (`CI Low`, `CI High`), training time (TT), image inference speed (IS) and selected hyperparameters of every model
-- `class_metrics_tuned.csv` — per-class precision, recall, F1 (with confidence intervals) and support on the validation set
-- `sensor_differences_tuned.csv` — OA difference S2 − PS for the same model and band set, with a paired confidence interval
-- `validation_predictions_tuned.csv.gz` — class predicted by every model for every validation point (`Point` = row of the validation CSV), from which all metrics and intervals can be recomputed
+- `model_results.csv` — OA, Cohen's kappa and macro F1 on the validation set with their 95 % confidence intervals (`CI Low`, `CI High`), training time (TT), image inference speed (IS) and selected hyperparameters of every model
+- `class_metrics.csv` — per-class precision, recall, F1 (with confidence intervals) and support on the validation set
+- `sensor_differences.csv` — OA difference S2 − PS for the same model and band set, with a paired confidence interval
+- `validation_predictions.csv.gz` — class predicted by every model for every validation point (`Point` = row of the validation CSV), from which all metrics and intervals can be recomputed
 - `Models/` — every fitted model: `<imagery>_<model>.joblib` (scaler + model, lzma-compressed; load only trusted files, with the pinned scikit-learn) and `<imagery>_<model>.json` (all hyperparameters, features, scaler statistics, seed and versions, enough to refit the model exactly). Only the JSON files are tracked in git
-- `confusion_matrices_tuned.csv` — confusion matrix of every model on the validation set (long format: true class, predicted class, count); `figures/Fig_B.7_confusion_matrices.png` shows those of the most accurate classifier of each experiment
+- `confusion_matrices.csv` — confusion matrix of every model on the validation set (long format: true class, predicted class, count); `figures/Fig_B.7_confusion_matrices.png` shows those of the most accurate classifier of each experiment
 
-`scratch/` - temporary and internal files, not part of the results (git-ignored), e.g. the breakdown of the training time (`time_breakdown_tuned.csv`).
+`scratch/` - temporary and internal files, not part of the results (git-ignored), e.g. the breakdown of the training time (`time_breakdown.csv`).
 
 `environment/Dockerfile` and `.codeocean/environment.json` - computational environment of the Code Ocean capsule (managed by Code Ocean).
 
@@ -76,6 +76,7 @@ All user-facing settings live in [`code/config.toml`](code/config.toml):
 | `tuning.factor` | Successive Halving elimination rate between rounds |
 | `tuning.cv_folds` | Inner stratified CV folds used to score each configuration |
 | `apply_model_on_image` | `true` to classify the full satellite image in every experiment; `false` to skip (faster) |
+| `image` | ROI and reference date of the classified composite, as in its file name (default `Holambra_2022-12-15`). The image is predicted in blocks of 100,000 pixels, in parallel over all CPU threads with one thread per block, the same for every model |
 | `uncertainty.n_resamples` | Bootstrap resamples for the confidence intervals of the validation metrics |
 | `uncertainty.confidence` | Coverage of the percentile confidence intervals |
 | `skip_plots` | Set to `true` to skip figure generation |
@@ -99,7 +100,7 @@ Training points are only a few metres apart, so neighbouring points often fall i
 
 MLP and LinearSVC use a larger maximum number of iterations than the scikit-learn defaults (`max_iter` 1000 and 10,000, set in `src/config.py`): with the defaults (200 and 1000), MLP stopped before converging in some image sets and LinearSVC results varied with the random seed.
 
-Tuning uses only the training set; the validation set is never seen during the search. Standardisation is fit inside each inner fold to avoid leakage. Tuned results are saved to `model_results_tuned.csv`, so `model_results.csv` keeps the default-hyperparameter results. In the tuned results, `Training Time (s)` is the time to obtain a trained model: the hyperparameter search plus the final fit (mean of 3 fits), and `Best Params` lists the selected hyperparameters. All times are elapsed times with every CPU thread available: the search runs its candidates in parallel, and the final model uses all threads where the estimator supports it (`n_jobs`). The breakdown of the training time (search, final fit and inner-CV OA) is written to `scratch/time_breakdown_tuned.csv`, outside `results/`.
+Tuning uses only the training set; the validation set is never seen during the search. Standardisation is fit inside each inner fold to avoid leakage. In the results, `Training Time (s)` is the time to obtain a trained model: the hyperparameter search plus the final fit (mean of 3 fits), and `Best Params` lists the selected hyperparameters. All times are elapsed times with every CPU thread available: the search runs its candidates in parallel, the final model uses all threads where the estimator supports it (`n_jobs`), and full-image classification predicts blocks of pixels in parallel, one thread per block, for every model. The breakdown of the training time (search, final fit and inner-CV OA) is written to `scratch/time_breakdown.csv`, outside `results/`.
 
 ## Confidence intervals
 Error bars and intervals describe the uncertainty of the validation metrics. Points of the same labelled polygon on one date are a few metres apart and not independent, so they are resampled together: a class-stratified bootstrap (`src/uncertainty.py`) draws, for each class, its polygons (one per date) and single "others" points with replacement, 2,000 times, and reports 95 % percentile intervals. The same resamples serve every model and experiment, so the S2 − PS differences get paired intervals.

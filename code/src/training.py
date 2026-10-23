@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import rasterio
 import sklearn
+from joblib import Parallel, delayed
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import (
     accuracy_score,
@@ -25,6 +26,7 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from matplotlib import colors
+from threadpoolctl import ThreadpoolController
 
 from .config import DEFAULT_RANDOM_STATE
 from .tuning import tune_model
@@ -34,6 +36,36 @@ INTERNAL_COLUMNS = ["Tuning Time (s)", "Final Fit Time (s)", "Tuning CV OA"]
 
 # Red, green and blue bands at t0 of each sensor's composite, for the image preview.
 RGB_BANDS = {"S2": ["B4_0", "B3_0", "B2_0"], "PS": ["B6_0", "B4_0", "B2_0"]}
+
+# Pixels per block in full-image classification. Every pixel is classified independently, so the
+# image is split into blocks predicted in parallel, one block per CPU thread at a time, with one
+# thread inside each block, the same for every model. Predicting the whole PS image in one call
+# would also need more memory than most computers have (MLP with 200 hidden units: ~60 GB).
+PREDICT_BLOCK_PIXELS = 100_000
+
+
+def _predict_block(model, block, controller):
+    # OpenMP thread limits are per thread (KNN), so they are set in each worker thread.
+    with controller.limit(limits=1, user_api="openmp"):
+        return model.predict(block)
+
+
+def predict_image(model, features):
+    """Predict the classes of *features* (pixels × bands) in parallel blocks of PREDICT_BLOCK_PIXELS rows."""
+    n_jobs = model.get_params().get("n_jobs")
+    if n_jobs is not None:
+        model.set_params(n_jobs=1)
+    controller = ThreadpoolController()
+    try:
+        with controller.limit(limits=1, user_api="blas"):
+            blocks = Parallel(n_jobs=-1, backend="threading")(
+                delayed(_predict_block)(model, features[start:start + PREDICT_BLOCK_PIXELS], controller)
+                for start in range(0, len(features), PREDICT_BLOCK_PIXELS)
+            )
+    finally:
+        if n_jobs is not None:
+            model.set_params(n_jobs=n_jobs)
+    return np.concatenate(blocks)
 
 
 def train_and_evaluate_model(
@@ -195,7 +227,7 @@ def train_and_evaluate_model(
             classification_times = []
             for _ in range(3):
                 start_time = time.time()
-                prediction = model.predict(image_features)
+                prediction = predict_image(model, image_features)
                 classification_times.append(time.time() - start_time)
             classification_time = float(np.mean(classification_times))
             classification_time_std = round(float(np.std(classification_times)), 6)
@@ -272,7 +304,8 @@ def train_and_evaluate_model(
             plt.close()
 
             # Save as TIFF
-            meta.update(count=1)
+            # No nodata value: every pixel is classified, and 0 is a class code (PMF).
+            meta.update(count=1, nodata=None)
             with rasterio.open(
                 results_path / "TIFF" / f"{model_name}_result_{filename}_{X_train.shape[1]}bands.tif",
                 "w",

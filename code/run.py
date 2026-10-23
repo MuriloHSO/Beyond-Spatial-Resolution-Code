@@ -113,6 +113,7 @@ ALL_EXPERIMENTS = ["S2_4b", "S2_Allb", "PS_4b", "PS_Allb"]
 
 # Fallback defaults (used when config.toml is missing and no CLI flag is given)
 _FALLBACK_RANDOM_STATE = 2025  # same as src.config.DEFAULT_RANDOM_STATE
+_FALLBACK_IMAGE = "Holambra_2022-12-15"  # same as src.experiments.DEFAULT_IMAGE
 _FALLBACK_MODELS: list = []          # empty → all models
 _FALLBACK_TUNING = {
     "enabled": True,
@@ -241,6 +242,8 @@ def resolve_config(args) -> dict:
         for exp in selected_experiments:
             exp["apply_model_on_image"] = False
 
+    image = toml.get("image", _FALLBACK_IMAGE)
+
     # --- skip_plots ---
     skip_plots = args.skip_plots or toml.get("skip_plots", False)
 
@@ -259,6 +262,7 @@ def resolve_config(args) -> dict:
         "random_state": random_state,
         "enabled_models": enabled_models,
         "selected_experiments": selected_experiments,
+        "image": image,
         "skip_plots": skip_plots,
         "tuning": tuning,
         "uncertainty": uncertainty,
@@ -372,7 +376,7 @@ def main(argv=None):
     print(f"  Random state  : {cfg['random_state']}")
     print(f"  Models        : {', '.join(model_names)}  ({len(model_names)} total)")
     print(f"  Experiments   : {', '.join(exp_names)}")
-    print(f"  Image classif.: {'enabled' if any_img else 'disabled'}")
+    print(f"  Image classif.: {'enabled (' + cfg['image'] + ')' if any_img else 'disabled'}")
     tuning = cfg["tuning"]
     if tuning["enabled"]:
         print(
@@ -432,7 +436,7 @@ def main(argv=None):
     from src.paths import setup_paths
     from src.download import ensure_composites
     from src.data import load_datasets, sample_counts
-    from src.experiments import results_filename, run_all_experiments
+    from src.experiments import RESULTS_FILENAME, run_all_experiments
     from src.plotting import (
         load_plot_data,
         plot_scatter_from_mode,
@@ -515,10 +519,11 @@ def main(argv=None):
     tuning=tuning,
     random_state=cfg["random_state"],
     uncertainty=cfg["uncertainty"],
+    image=cfg["image"],
     )
     print(f"\n    [OK] All experiments complete.")
-    RESULTS_FILE = paths["results_path"] / results_filename(tuning)
-    CONFUSION_FILE = paths["results_path"] / results_filename(tuning).replace("model_results", "confusion_matrices")
+    RESULTS_FILE = paths["results_path"] / RESULTS_FILENAME
+    CONFUSION_FILE = paths["results_path"] / RESULTS_FILENAME.replace("model_results", "confusion_matrices")
     print(f"      Results -> {RESULTS_FILE}")
 
     # -- Step 3 (optional): Generate figures ---------------------

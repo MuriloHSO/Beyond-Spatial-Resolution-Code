@@ -12,6 +12,12 @@ from .paths import get_image_lists
 from .tuning import polygon_groups
 from .uncertainty import confusion_counts, interval, metrics_from_confusion, validation_resamples
 
+# ROI and reference date of the composite classified in full-image classification (both sensors).
+DEFAULT_IMAGE = "Holambra_2022-12-15"
+
+# Combined results table; the other tables are named after it (class_metrics.csv, ...).
+RESULTS_FILENAME = "model_results.csv"
+
 # Same band set of both sensors, for the paired S2 - PS differences.
 SENSOR_PAIRS = {"4 bands": ("S2_1", "PS_1"), "all bands": ("S2_2", "PS_2")}
 
@@ -49,21 +55,22 @@ def _tuning_groups(df_train, tuning):
         return polygon_groups(df_train)
     return None
 
-def _get_imagery(paths, sensor):
-    images = get_image_lists(paths)
-    return images[sensor][0] if images[sensor] else None
+def _get_imagery(paths, sensor, image=DEFAULT_IMAGE):
+    """Composite of *sensor* for the ROI and reference date in *image* (e.g. "Holambra_2022-12-15"), or None."""
+    matches = [path for path in get_image_lists(paths)[sensor] if path.stem == f"{sensor}_{image}"]
+    return matches[0] if matches else None
 
 # ---------------------------------------------------------------------------
 # Individual experiment runners
 # ---------------------------------------------------------------------------
 
 def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, save_csv=True,
-                         tuning=None, random_state=DEFAULT_RANDOM_STATE):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
     X,  y  = datasets["df_s2train"][S2_BANDS_4], datasets["df_s2train"]["Class"]
     groups = _tuning_groups(datasets["df_s2train"], tuning)
     X2, y2 = datasets["df_s2val"][S2_BANDS_4],   datasets["df_s2val"]["Class"]
 
-    imagery = _get_imagery(paths, "S2")
+    imagery = _get_imagery(paths, "S2", image)
     params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
@@ -81,12 +88,12 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, sav
 
 
 def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
-                         tuning=None, random_state=DEFAULT_RANDOM_STATE):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
     X,  y  = datasets["df_s2train"][S2_BANDS_ALL], datasets["df_s2train"]["Class"]
     groups = _tuning_groups(datasets["df_s2train"], tuning)
     X2, y2 = datasets["df_s2val"][S2_BANDS_ALL],   datasets["df_s2val"]["Class"]
 
-    imagery = _get_imagery(paths, "S2")
+    imagery = _get_imagery(paths, "S2", image)
     params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
@@ -104,12 +111,12 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, s
 
 
 def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, save_csv=True,
-                         tuning=None, random_state=DEFAULT_RANDOM_STATE):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
     X,  y  = datasets["df_psstrain"][PS_BANDS_4], datasets["df_psstrain"]["Class"]
     groups = _tuning_groups(datasets["df_psstrain"], tuning)
     X2, y2 = datasets["df_pssval"][PS_BANDS_4],   datasets["df_pssval"]["Class"]
 
-    imagery = _get_imagery(paths, "PS")
+    imagery = _get_imagery(paths, "PS", image)
     params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
@@ -127,12 +134,12 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, sa
 
 
 def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
-                         tuning=None, random_state=DEFAULT_RANDOM_STATE):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
     X,  y  = datasets["df_psstrain"][PS_BANDS_ALL], datasets["df_psstrain"]["Class"]
     groups = _tuning_groups(datasets["df_psstrain"], tuning)
     X2, y2 = datasets["df_pssval"][PS_BANDS_ALL],   datasets["df_pssval"]["Class"]
 
-    imagery = _get_imagery(paths, "PS")
+    imagery = _get_imagery(paths, "PS", image)
     params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
         apply_model_on_image=apply_model_on_image,
@@ -173,6 +180,7 @@ def run_all_experiments(
     tuning: dict = None,
     random_state: int = DEFAULT_RANDOM_STATE,
     uncertainty: dict = None,
+    image: str = DEFAULT_IMAGE,
 ) -> pd.DataFrame:
     """
     Run a list of experiments and return the combined results DataFrame.
@@ -191,23 +199,23 @@ def run_all_experiments(
         Output of :func:`src.paths.setup_paths`.
     tuning : dict, optional
         Successive Halving settings; ``None`` keeps default hyperparameters.
-        Tuned results are saved to ``model_results_tuned.csv`` so the
-        default-hyperparameter results are not overwritten.
     random_state : int
         Seed for the hyperparameter search and the bootstrap resamples.
     uncertainty : dict
         ``n_resamples`` and ``confidence`` of the class-stratified bootstrap of the
         validation points by polygon (see :mod:`src.uncertainty`).
+    image : str
+        ROI and reference date of the composite classified in full-image
+        classification, as in its file name (e.g. ``"Holambra_2022-12-15"``).
 
     Returns
     -------
     pd.DataFrame
         Concatenated results from all experiments, with confidence intervals of OA,
-        Kappa and Macro F1, also saved to ``results_path/model_results.csv`` (or
-        ``model_results_tuned.csv``).  Saved next to it: ``class_metrics*.csv`` (with
-        intervals), ``confusion_matrices*.csv``, ``validation_predictions*.csv.gz`` (class
-        predicted for every validation point) and ``sensor_differences*.csv`` (paired
-        S2 - PS differences of OA with intervals).
+        Kappa and Macro F1, also saved to ``results_path/model_results.csv``.  Saved next
+        to it: ``class_metrics.csv`` (with intervals), ``confusion_matrices.csv``,
+        ``validation_predictions.csv.gz`` (class predicted for every validation point) and
+        ``sensor_differences.csv`` (paired S2 - PS differences of OA with intervals).
     """
     selected_results = []
     selected_class_metrics = []
@@ -235,6 +243,7 @@ def run_all_experiments(
             save_csv=False,
             tuning=tuning,
             random_state=random_state,
+            image=image,
         )
         selected_results.append(results_i)
         selected_class_metrics.append(class_metrics_i)
@@ -246,7 +255,7 @@ def run_all_experiments(
         if selected_results
         else pd.DataFrame()
     )
-    name = results_filename(tuning)
+    name = RESULTS_FILENAME
     class_metrics = pd.concat(selected_class_metrics, ignore_index=True) if selected_results else pd.DataFrame()
     if selected_results:
         predictions = pd.concat(selected_predictions, ignore_index=True)
@@ -314,8 +323,3 @@ def _add_intervals(results, class_metrics, predictions, df_val, settings, random
                                     "CI Low": round(float(low), 6), "CI High": round(float(high), 6)})
     return results, class_metrics, pd.DataFrame(differences)
 
-
-def results_filename(tuning: dict = None) -> str:
-    """Name of the combined results table (CSV) for this run."""
-    tuned = bool(tuning and tuning.get("enabled", False))
-    return "model_results_tuned.csv" if tuned else "model_results.csv"

@@ -1,30 +1,111 @@
 Beyond Spatial Resolution - Run log
-Started : 2026-10-13 00:32:19
+Started : 2026-10-22 12:49:27
 ------------------------------------------------------------
-usage: run.py [-h] [--config CONFIG] [--random-state RANDOM_STATE]
-              [--models {CART,KNN,MLP,RF,SGDC,LinearSVC,SVC_rbf} [{CART,KNN,MLP,RF,SGDC,LinearSVC,SVC_rbf} ...]]
-              [--experiments {S2_4b,S2_Allb,PS_4b,PS_Allb} [{S2_4b,S2_Allb,PS_4b,PS_Allb} ...]]
-              [--apply-on-image | --no-image] [--skip-plots] [--no-tuning]
 
-Beyond Spatial Resolution — training and evaluation script.
+============================================================
+  Beyond Spatial Resolution
+  Agricultural Plastic Structures Mapping
+============================================================
 
-options:
-  -h, --help            show this help message and exit
-  --config CONFIG       Path to a TOML config file (default: config.toml next
-                        to run.py).
-  --random-state RANDOM_STATE
-                        Random seed for all classifiers.
-  --models {CART,KNN,MLP,RF,SGDC,LinearSVC,SVC_rbf} [{CART,KNN,MLP,RF,SGDC,LinearSVC,SVC_rbf} ...]
-                        Subset of models to run. Omit to use config.toml
-                        value.
-  --experiments {S2_4b,S2_Allb,PS_4b,PS_Allb} [{S2_4b,S2_Allb,PS_4b,PS_Allb} ...]
-                        Subset of experiments to run. Omit to use config.toml
-                        value.
-  --apply-on-image      Force full-image classification for every experiment.
-  --no-image            Disable full-image classification for every
-                        experiment.
-  --skip-plots          Skip figure generation after the experiments.
-  --no-tuning           Use default hyperparameters instead of the Successive
-                        Halving search.
+Initializing...
+
+  Random state  : 2025
+  Models        : CART, KNN, MLP, RF, SGDC, LinearSVC, SVC_rbf  (7 total)
+  Experiments   : S2_4b, S2_Allb, PS_4b, PS_Allb
+  Image classif.: enabled (Holambra_2022-12-15)
+  Tuning        : Successive Halving  (81 candidates, factor 3, 5-fold CV grouped by labelled polygon and date)
+  Intervals     : 95% class-stratified bootstrap of the validation points by polygon (2000 resamples)
+  Figures       : enabled
+  Data generation: disabled (data/*.csv used as is)
+
+Planned steps:
+  [1] Load datasets
+  [2] Run experiments  (4 exp × 7 model(s)  [+tuning]  [+image])
+  [3] Generate figures
+
 ------------------------------------------------------------
-Ended : 2026-10-13 00:32:19
+[OK] Composites already available.
+  Sentinel-2 : 8 composites
+  PlanetScope: 8 composites
+
+[1/3] Loading datasets...
+    [OK] Datasets loaded (sample counts -> sample_counts.csv).
+
+[2/3] Running experiments...
+
+  + [1/4] S2_4b  [+image]
+  +- [1/7] CART          tune 26.5s  train 0.294s  valid 0.001s  classif 0.099s  [OK]
+  |      best: criterion=entropy, max_depth=40, max_features=None, min_samples_leaf=8, min_samples_split=12
+  +- [2/7] KNN           tune 24.6s  train 0.100s  valid 0.646s  classif 120.711s  [OK]
+  |      best: n_neighbors=4, p=1, weights=distance
+  +- [3/7] MLP           tune 136.0s  train 11.768s  valid 0.010s  classif 1.293s  [OK]
+  |      best: activation=relu, alpha=0.01275, early_stopping=False, hidden_layer_sizes=(200,), learning_rate_init=0.0005594
+  +- [4/7] RF            tune 100.9s  train 2.074s  valid 0.070s  classif 5.938s  [OK]
+  |      best: max_depth=20, max_features=sqrt, min_samples_leaf=1, n_estimators=238
+  +- [5/7] SGDC          tune 20.8s  train 0.052s  valid 0.001s  classif 0.071s  [OK]
+  |      best: alpha=0.004417, l1_ratio=0.3148, loss=modified_huber, penalty=l2
+  +- [6/7] LinearSVC     tune 21.6s  train 0.432s  valid 0.001s  classif 0.074s  [OK]
+  |      best: C=6.256, loss=hinge
+  \- [7/7] SVC_rbf       tune 28.8s  train 1.301s  valid 1.115s  classif 57.003s  [OK]
+         best: C=5.828, gamma=0.2312
+
+  + [2/4] S2_Allb  [+image]
+  +- [1/7] CART          tune 28.2s  train 0.759s  valid 0.002s  classif 0.113s  [OK]
+  |      best: criterion=entropy, max_depth=None, max_features=None, min_samples_leaf=6, min_samples_split=11
+  +- [2/7] KNN           tune 66.7s  train 0.006s  valid 2.850s  classif 383.762s  [OK]
+  |      best: n_neighbors=7, p=1, weights=distance
+  +- [3/7] MLP           tune 174.7s  train 28.999s  valid 0.026s  classif 1.480s  [OK]
+  |      best: activation=tanh, alpha=0.007262, early_stopping=False, hidden_layer_sizes=(100, 50), learning_rate_init=0.0008642
+  +- [4/7] RF            tune 130.3s  train 3.337s  valid 0.091s  classif 8.745s  [OK]
+  |      best: max_depth=20, max_features=log2, min_samples_leaf=1, n_estimators=307
+  +- [5/7] SGDC          tune 27.7s  train 0.128s  valid 0.001s  classif 0.098s  [OK]
+  |      best: alpha=0.001667, l1_ratio=0.06193, loss=hinge, penalty=elasticnet
+  +- [6/7] LinearSVC     tune 28.6s  train 0.892s  valid 0.001s  classif 0.099s  [OK]
+  |      best: C=1.936, loss=hinge
+  \- [7/7] SVC_rbf       tune 33.8s  train 1.897s  valid 0.732s  classif 36.521s  [OK]
+         best: C=288.5, gamma=0.01407
+
+  + [3/4] PS_4b  [+image]
+  +- [1/7] CART          tune 21.2s  train 0.256s  valid 0.001s  classif 0.703s  [OK]
+  |      best: criterion=gini, max_depth=10, max_features=None, min_samples_leaf=4, min_samples_split=19
+  +- [2/7] KNN           tune 25.0s  train 0.101s  valid 0.582s  classif 1169.111s  [OK]
+  |      best: n_neighbors=4, p=1, weights=distance
+  +- [3/7] MLP           tune 159.2s  train 16.899s  valid 0.018s  classif 9.882s  [OK]
+  |      best: activation=tanh, alpha=3.29e-05, early_stopping=False, hidden_layer_sizes=(100,), learning_rate_init=0.003448
+  +- [4/7] RF            tune 100.7s  train 1.981s  valid 0.077s  classif 62.981s  [OK]
+  |      best: max_depth=20, max_features=sqrt, min_samples_leaf=1, n_estimators=238
+  +- [5/7] SGDC          tune 23.6s  train 0.287s  valid 0.001s  classif 0.629s  [OK]
+  |      best: alpha=0.0001152, l1_ratio=0.7026, loss=modified_huber, penalty=elasticnet
+  +- [6/7] LinearSVC     tune 28.1s  train 3.388s  valid 0.001s  classif 0.622s  [OK]
+  |      best: C=73.76, loss=hinge
+  \- [7/7] SVC_rbf       tune 30.5s  train 1.358s  valid 1.100s  classif 590.880s  [OK]
+         best: C=27.29, gamma=0.08974
+
+  + [4/4] PS_Allb  [+image]
+  +- [1/7] CART          tune 35.9s  train 0.520s  valid 0.001s  classif 0.944s  [OK]
+  |      best: criterion=entropy, max_depth=40, max_features=None, min_samples_leaf=8, min_samples_split=12
+  +- [2/7] KNN           tune 58.3s  train 0.006s  valid 1.881s  classif 3377.808s  [OK]
+  |      best: n_neighbors=9, p=1, weights=distance
+  +- [3/7] MLP           tune 177.4s  train 30.099s  valid 0.034s  classif 18.773s  [OK]
+  |      best: activation=tanh, alpha=1.208e-05, early_stopping=False, hidden_layer_sizes=(200,), learning_rate_init=0.0005921
+  +- [4/7] RF            tune 112.4s  train 1.802s  valid 0.070s  classif 53.551s  [OK]
+  |      best: max_depth=10, max_features=log2, min_samples_leaf=1, n_estimators=219
+  +- [5/7] SGDC          tune 27.2s  train 0.387s  valid 0.001s  classif 0.686s  [OK]
+  |      best: alpha=0.0001453, l1_ratio=0.6775, loss=modified_huber, penalty=elasticnet
+  +- [6/7] LinearSVC     tune 32.4s  train 4.768s  valid 0.001s  classif 0.678s  [OK]
+  |      best: C=43.78, loss=hinge
+  \- [7/7] SVC_rbf       tune 32.1s  train 1.216s  valid 0.871s  classif 465.804s  [OK]
+         best: C=27.29, gamma=0.08974
+
+    [OK] All experiments complete.
+      Results -> C:\capsule\capsule-7671752\results\model_results_tuned.csv
+
+[3/3] Generating figures...
+    [OK] Figures saved: Figure1, Fig_B.1_Scatter combined, Fig_B.2_Satellite impact, Fig_B.3_Band impact, Fig_B.4_OA/Kappa bars, Fig_B.7_Confusion matrices
+
+============================================================
+  [Success]  All done!  ->  C:\capsule\capsule-7671752\results
+============================================================
+
+------------------------------------------------------------
+Ended : 2026-10-22 18:50:26

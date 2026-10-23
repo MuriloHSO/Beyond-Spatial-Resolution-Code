@@ -1,0 +1,88 @@
+{
+ "imagery": "S2_1",
+ "model": "MLP",
+ "estimator": "MLPClassifier",
+ "features": [
+  "B2_0",
+  "B3_0",
+  "B4_0",
+  "B8_0",
+  "B2_1",
+  "B3_1",
+  "B4_1",
+  "B8_1",
+  "B2_2",
+  "B3_2",
+  "B4_2",
+  "B8_2"
+ ],
+ "hyperparameters": {
+  "activation": "relu",
+  "alpha": 0.012754930305555068,
+  "batch_size": "auto",
+  "beta_1": 0.9,
+  "beta_2": 0.999,
+  "early_stopping": false,
+  "epsilon": 1e-08,
+  "hidden_layer_sizes": [
+   200
+  ],
+  "learning_rate": "constant",
+  "learning_rate_init": 0.0005593737528598265,
+  "max_fun": 15000,
+  "max_iter": 1000,
+  "momentum": 0.9,
+  "n_iter_no_change": 10,
+  "nesterovs_momentum": true,
+  "power_t": 0.5,
+  "random_state": 2025,
+  "shuffle": true,
+  "solver": "adam",
+  "tol": 0.0001,
+  "validation_fraction": 0.1,
+  "verbose": false,
+  "warm_start": false
+ },
+ "tuned_hyperparameters": {
+  "activation": "relu",
+  "alpha": 0.012754930305555068,
+  "early_stopping": false,
+  "hidden_layer_sizes": [
+   200
+  ],
+  "learning_rate_init": 0.0005593737528598265
+ },
+ "scaler": {
+  "mean": [
+   1328.5108333333333,
+   1610.3309444444444,
+   1843.7946666666667,
+   2884.5718888888887,
+   1650.7985555555556,
+   1866.7500555555555,
+   1966.1731388888888,
+   2870.866666666667,
+   1344.9466666666667,
+   1591.3616111111112,
+   1651.869888888889,
+   2990.449111111111
+  ],
+  "scale": [
+   1310.0766726266124,
+   1305.5909803091715,
+   1302.955935323132,
+   1018.0672668229895,
+   1280.1421517542158,
+   1272.9950687148082,
+   1309.5642458660448,
+   1031.8461636525303,
+   1270.242005874821,
+   1278.904787509681,
+   1321.314686449316,
+   893.0184098010826
+  ]
+ },
+ "random_state": 2025,
+ "training_points": 36000,
+ "scikit_learn": "1.9.0"
+}
