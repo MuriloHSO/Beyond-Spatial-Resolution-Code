@@ -1,0 +1,5 @@
+Panel,ROI,Reference Date,Background Time Step,Centre X,Centre Y,Width (m),Height (m),Validation APS Points,Validation Others Points,Missed S2,Wrongly Classified S2,Missed PS,Wrongly Classified PS,PMF Outside Polygons S2 (ha),PMF Outside Polygons PS (ha),PGH Outside Polygons S2 (ha),PGH Outside Polygons PS (ha),Missed S2 in Polygon Errors,Missed PS in Polygon Errors
+A,Sumare,2022-12-15,1,266275.445,7466681.45,900,816,241,1,3,0,213,0,14.83,0.61,0.25,0.77,,
+B,Holambra,2022-12-15,0,289674.007,7498441.261,900,816,89,0,0,0,0,0,0.0,0.0,0.01,0.01,0.0,0.0
+C,Sumare,2022-12-15,0,274575.445,7464981.45,900,816,0,7,0,4,0,2,0.02,0.02,11.62,15.61,,
+D,Holambra,2023-06-18,0,289272.926,7498234.092,900,816,70,0,5,0,11,0,0.0,0.0,0.32,0.15,5.0,11.0

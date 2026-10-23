@@ -995,7 +995,8 @@ def plot_confusion_matrices(results_file, confusion_file, results_path, class_na
         ax.set_yticklabels(tick_labels)
         ax.set_xlabel("Predicted class")
         ax.set_ylabel("True class")
-        ax.set_title(f"{IMAGE_SET_TITLES[image_set]}: {normalize_model_name(model)} (OA = {oa:.3f})", fontsize=11)
+        model_label = normalize_model_name(model).replace("_", " ")  # SVC_rbf -> SVC rbf, as in the paper
+        ax.set_title(f"{IMAGE_SET_TITLES[image_set]}: {model_label} (OA = {oa:.3f})", fontsize=11)
 
     for ax in axes.flat[len(image_sets):]:
         ax.axis("off")

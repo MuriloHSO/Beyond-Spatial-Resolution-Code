@@ -446,6 +446,7 @@ def main(argv=None):
         plot_scatter_combined,
         plot_confusion_matrices,
     )
+    from src.visual_inspection import plot_visual_inspection
 
     paths = setup_paths(base=base)
     
@@ -549,6 +550,9 @@ def main(argv=None):
         ("Fig_B.2_Satellite impact", lambda: plot_satellite_impact(RESULTS_FILE, paths["figures_path"])),
         ("Fig_B.3_Band impact",      lambda: plot_band_impact(RESULTS_FILE,      paths["figures_path"])),
         ("Fig_B.4_OA/Kappa bars",    lambda: plot_oa_kappa_bars(RESULTS_FILE,   paths["figures_path"])),
+        ("Fig_B.5_Visual inspection", lambda: plot_visual_inspection(
+                                 paths, paths["results_path"], paths["figures_path"],
+                             )),
         ("Fig_B.7_Confusion matrices", lambda: plot_confusion_matrices(
                                  RESULTS_FILE, CONFUSION_FILE, paths["figures_path"], CLASS_NAMES,
                              )),
