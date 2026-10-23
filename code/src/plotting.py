@@ -16,6 +16,7 @@ from pathlib import Path
 import matplotlib.colors as mcolors
 import matplotlib.image as mpimg
 import matplotlib.lines as mlines
+import matplotlib.markers as mmarkers
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -38,6 +39,20 @@ ALG_COLORS = {
 
 PREFERRED_ALG_ORDER = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVC_rbf"]
 IMAGERY_MARKERS = {"S2": "^", "PS": "o"}
+
+
+def marker_area_factor(marker):
+    """Scatter size factor that gives `marker` the filled area of a circle ("o") of the same size.
+
+    At equal scatter size s, matplotlib's markers cover different areas (circle 0.785 s, triangle 0.5 s), so
+    without this factor a triangle would show a smaller training time than a circle of the same value.
+    """
+    def unit_area(m):
+        style = mmarkers.MarkerStyle(m)
+        x, y = style.get_path().transformed(style.get_transform()).to_polygons()[0].T
+        return 0.5 * abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+
+    return unit_area("o") / unit_area(marker)
 
 
 # ---------------------------------------------------------------------------
@@ -356,7 +371,7 @@ def plot_scatter_from_mode(
     results_path,
     mode="both",
     output_name="figure.png",
-    marker_scale_factor=1.5,
+    max_point_size=24.0 ** 2,
     min_point_size=18,
     save_dpi=400,
     show_xlabel=True,
@@ -375,7 +390,9 @@ def plot_scatter_from_mode(
         Directory where the figure is saved.
     mode : {'both', 'all', '4'}
     output_name : str
-    marker_scale_factor, min_point_size, save_dpi : plot tuning
+    max_point_size, min_point_size, save_dpi : plot tuning. Marker area (points^2) is proportional to the
+        training time: the longest training time of all image sets gets max_point_size, so every panel and
+        the size legend share one scale.
     show_xlabel : bool
     bands : bool
         Whether to show the band legend.
@@ -392,6 +409,13 @@ def plot_scatter_from_mode(
 
     alg_legend = {}
     imagery_legend = {}
+
+    # One scale for all panels: the longest training time of every image set gets max_point_size.
+    longest_tt = max(tt for mode_data in plot_data["data_by_mode"].values()
+                     for alg_data in mode_data.values() for (_, _, tt) in alg_data.values())
+
+    def area(training_time):
+        return max(min_point_size, max_point_size * training_time / longest_tt)
 
     level_map = plot_data["level_map"]
     band_map = plot_data["band_map"]
@@ -410,8 +434,7 @@ def plot_scatter_from_mode(
 
         plot_items = []
         for alg, (oa, classification_time, training_time) in alg_data.items():
-            point_size = (training_time * 100 if training_time < 0.5 else training_time * 35) * marker_scale_factor
-            point_size = max(min_point_size, point_size)
+            point_size = area(training_time) * marker_area_factor(marker)  # equal filled area per TT
             plot_items.append((alg, oa, classification_time, point_size))
 
         plot_items.sort(key=lambda item: item[3], reverse=True)
@@ -454,26 +477,22 @@ def plot_scatter_from_mode(
                       linestyle="None", markersize=8, label="All bands"),
     ]
 
-    size_legend_values = [0.01, 17.16, 34.32]
-    size_legend_markers = [3.5, 12.6, 23.8]
+    # Size legend: values near 1/10, 1/2 and 1 of the longest training time (one significant figure), drawn with the same area as
+    # the points (Line2D markersize is a diameter: sqrt of the scatter area).
+    def round_value(x):
+        return float(f"{x:.1g}")  # one significant figure
+
+    size_legend_values = [round_value(longest_tt * f) for f in (0.1, 0.5, 1.0)]
     size_legend = [
         mlines.Line2D(
             [0], [0],
             color="gray", marker="o", linestyle="None",
-            markersize=marker_size * marker_scale_factor,
+            markersize=np.sqrt(area(value)),
             markerfacecolor="gray", markeredgecolor="gray",
-            label=f"{value:.2f}",
+            label=f"{value:g}",
         )
-        for marker_size, value in zip(size_legend_markers, size_legend_values)
+        for value in size_legend_values
     ]
-
-    title_to_first_gap = 0.0
-    gap_1_to_2 = 0.8
-    gap_2_to_3 = 2.8
-
-    training_legend_anchor_x = 1.2
-    training_legend_anchor_y = 0.3
-    third_item_offset_y = 0.035 + 0.02 * gap_2_to_3
 
     legend1 = plt.legend(
         imagery_legend_handles, imagery_legend_labels,
@@ -486,27 +505,16 @@ def plot_scatter_from_mode(
         bbox_to_anchor=(1, 0.53), frameon=False,
     )
     plt.gca().add_artist(legend1)
-
-    legend3_top = plt.legend(
-        handles=size_legend[:2],
+    # One size legend: the three entries share the handle column, so their labels line up.
+    legend3 = plt.legend(
+        handles=size_legend,
         title="Training Time (s)", fontsize=8,
-        loc="lower right",
-        bbox_to_anchor=(training_legend_anchor_x - 0.008, training_legend_anchor_y),
-        frameon=False, handlelength=1.0, handletextpad=2.8,
-        labelspacing=gap_1_to_2, handleheight=3.5,
+        loc="upper left", bbox_to_anchor=(1, 0.5),
+        frameon=False, handlelength=2.0, handleheight=2.0, handletextpad=1.0, labelspacing=1.6,
+        borderpad=0.6,
     )
-    legend3_top._legend_box.sep = title_to_first_gap
-
-    legend3_bottom = plt.legend(
-        handles=[size_legend[2]], fontsize=8,
-        loc="lower right",
-        bbox_to_anchor=(training_legend_anchor_x - 0.0285,
-                        training_legend_anchor_y - third_item_offset_y),
-        frameon=False, handlelength=1.0, handletextpad=3.5,
-    )
-
     plt.gca().add_artist(legend2)
-    plt.gca().add_artist(legend3_top)
+    plt.gca().add_artist(legend3)
 
     if bands or mode in {"all", "4"}:
         plt.legend(
@@ -514,10 +522,10 @@ def plot_scatter_from_mode(
             title="Band configuration", fontsize=8,
             loc="lower left", bbox_to_anchor=(1, 0.00), frameon=False,
         )
-        plt.gca().add_artist(legend3_bottom)
 
     plt.grid(True, which="major", linestyle="--", linewidth=0.5, alpha=0.7)
     plt.xscale("log")
+    plt.margins(x=0.06, y=0.08)  # room for the largest markers at the edges
     if show_xlabel:
         plt.xlabel("Inference Speed (s)")
     plt.ylabel("Overall Accuracy (OA)")
