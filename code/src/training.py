@@ -70,9 +70,9 @@ def predict_image(model, features):
 
 def train_and_evaluate_model(
     X_train,
-    X_test,
+    X_val,
     y_train,
-    y_test,
+    y_val,
     models: dict,
     imagery,
     results_path,
@@ -89,8 +89,10 @@ def train_and_evaluate_model(
 
     Parameters
     ----------
-    X_train, X_test : array-like
-    y_train, y_test : array-like
+    X_train, X_val : array-like
+        Train-test and validation features.
+    y_train, y_val : array-like
+        Train-test and validation classes.
     models : dict[str, estimator]
     imagery : str or Path
         Path to the GeoTIFF used for full-image classification.  Ignored when
@@ -109,7 +111,7 @@ def train_and_evaluate_model(
     random_state : int
         Seed for the hyperparameter search.
     groups : array-like, optional
-        Spatial block of each training point, used to split the tuning folds.
+        Spatial block of each train-test point, used to split the tuning folds.
     models_path : Path, optional
         Where each fitted model is saved: ``<imagery>_<model>.joblib`` (scaler +
         model, lzma-compressed) and ``<imagery>_<model>.json`` (hyperparameters,
@@ -125,7 +127,7 @@ def train_and_evaluate_model(
     """
     scaler = StandardScaler()
     X_train_norm = scaler.fit_transform(X_train)
-    X_test_norm = scaler.transform(X_test)
+    X_val_norm = scaler.transform(X_val)
 
     filename = Path(imagery).stem if imagery is not None else "dataset"
     if condition_label is not None:
@@ -192,7 +194,7 @@ def train_and_evaluate_model(
     labels = np.unique(y_train)
     n_models = len(models)
     for model_idx, (model_name, model) in enumerate(models.items(), 1):
-        # Hyperparameter tuning (training set only)
+        # Hyperparameter tuning (train-test set only)
         best_params, tuning_score, tuning_time = {}, np.nan, np.nan
         if tuning and tuning.get("enabled", False):
             model, best_params, tuning_score, tuning_time = tune_model(
@@ -216,7 +218,7 @@ def train_and_evaluate_model(
         validation_times = []
         for _ in range(3):
             start_time = time.time()
-            y_pred = model.predict(X_test_norm)
+            y_pred = model.predict(X_val_norm)
             validation_times.append(time.time() - start_time)
         validation_time = float(np.mean(validation_times))
         validation_time_std = round(float(np.std(validation_times)), 6)
@@ -236,20 +238,20 @@ def train_and_evaluate_model(
             _save_model(models_path, name, model_name, scaler, model, list(X_train.columns),
                         best_params, random_state, len(y_train))
         prediction_frames.append(pd.DataFrame({
-            "Imagery": name, "Models": model_name, "Point": np.asarray(y_test.index),
-            "True Class": np.asarray(y_test), "Predicted Class": y_pred,
+            "Imagery": name, "Models": model_name, "Point": np.asarray(y_val.index),
+            "True Class": np.asarray(y_val), "Predicted Class": y_pred,
         }))
 
         # Metrics (confidence intervals are added by the dispatcher, src.experiments)
-        accuracy = round(accuracy_score(y_test, y_pred), 6)
-        kappa = round(cohen_kappa_score(y_test, y_pred), 6)
+        accuracy = round(accuracy_score(y_val, y_pred), 6)
+        kappa = round(cohen_kappa_score(y_val, y_pred), 6)
         precision, recall, f1, support = precision_recall_fscore_support(
-            y_test, y_pred, labels=labels, zero_division=0
+            y_val, y_pred, labels=labels, zero_division=0
         )
         macro_f1 = round(float(np.mean(f1)), 6)
         for label, p, r, f, s in zip(labels, precision, recall, f1, support):
             class_rows.append([name, model_name, label, round(p, 6), round(r, 6), round(f, 6), int(s)])
-        cm = confusion_matrix(y_test, y_pred, labels=labels)
+        cm = confusion_matrix(y_val, y_pred, labels=labels)
         for i, true_label in enumerate(labels):
             for j, pred_label in enumerate(labels):
                 confusion_rows.append([name, model_name, true_label, pred_label, int(cm[i, j])])
@@ -358,7 +360,7 @@ def _save_model(models_path, imagery, model_name, scaler, model, features, best_
         "tuned_hyperparameters": {k: _json_value(v) for k, v in sorted(best_params.items())},
         "scaler": {"mean": scaler.mean_.tolist(), "scale": scaler.scale_.tolist()},
         "random_state": random_state,
-        "training_points": int(n_train),
+        "train_test_points": int(n_train),
         "scikit_learn": sklearn.__version__,
     }
     with open(f"{stem}.json", "w", encoding="utf-8") as fh:

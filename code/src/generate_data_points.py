@@ -1,12 +1,12 @@
 """
 generate_data_points.py
 
-Draw the training and validation points from the reference polygons and
+Draw the train-test and validation points from the reference polygons and
 extract their PlanetScope (PS) and Sentinel-2 (S2) values from the
 3-time-series composites, rewriting
 
-    data/PS_Training.csv, data/PS_Validation.csv,
-    data/S2_Training.csv, data/S2_Validation.csv
+    data/PS_TrainTest.csv, data/PS_Validation.csv,
+    data/S2_TrainTest.csv, data/S2_Validation.csv
 
 with the columns Class, X, Y, Reference_Date and the bands <band>_<t>.
 
@@ -14,8 +14,8 @@ Classes: 0 = plastic-mulched farmland (PMF), 1 = plastic greenhouses (PGH),
 2 = others.
 
 Sampling rules
-- Sets: each ROI is split in two halves (data/polygons/ROIs.gpkg); training
-  points come from the training halves and validation points from the
+- Sets: each ROI is split in two halves (data/polygons/ROIs.gpkg); train-test
+  points come from the train-test halves and validation points from the
   validation halves.
 - Reference dates: the PMF reference dates with PS and S2 composites for
   every ROI.
@@ -49,7 +49,7 @@ from src.config import DEFAULT_RANDOM_STATE
 from src.preprocessing import GRID_CRS, SENSORS, composite_path, read_settings
 
 CLASSES = {"PMF": 0, "PGH": 1, "others": 2}
-SETS = {"training": "Training", "validation": "Validation"}
+SETS = {"train-test": "TrainTest", "validation": "Validation"}
 MAX_TRIES = 50  # random positions tried inside a pixel before it is dropped
 
 
@@ -241,7 +241,7 @@ def generate(paths: dict, cfg: dict, random_state: int = DEFAULT_RANDOM_STATE) -
     for date in dates:
         regions[("PMF", date)] = (pmf[pd.to_datetime(pmf["reference_date"]).dt.date == date].union_all(), True)
 
-    targets = {"training": cfg["training_points"], "validation": cfg["validation_points"]}
+    targets = {"train-test": cfg["train_test_points"], "validation": cfg["validation_points"]}
     summary, tables = [], {s: [] for s in SETS}
     composites = {
         (sensor, roi, date): Composite(composite_path(paths, sensor, roi, date))

@@ -73,7 +73,7 @@ DEFAULTS = {
     "first_year": 2021,
     "last_year": 2023,
     "windows": [[-30, 0], [30, 60], [100, 130]],
-    "training_points": 12000,
+    "train_test_points": 12000,
     "validation_points": 4000,
     "sentinel2": {
         "cloud_filter": 20,
@@ -119,7 +119,7 @@ def window_ranges(reference_date: dt.date, windows: list) -> list:
 
 
 def load_rois(paths: dict):
-    """ROI polygons dissolved per ROI (the training/validation halves joined)."""
+    """ROI polygons dissolved per ROI (the train-test/validation halves joined)."""
     import geopandas as gpd
 
     rois = gpd.read_file(paths["polygons_path"] / "ROIs.gpkg").to_crs(GRID_CRS)

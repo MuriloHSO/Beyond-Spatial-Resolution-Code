@@ -29,9 +29,9 @@ def load_datasets(paths: dict) -> dict:
     """
     datasets_path = paths["datasets_path"]
 
-    df_s2train = _read(datasets_path / "S2_Training.csv")
+    df_s2train = _read(datasets_path / "S2_TrainTest.csv")
     df_s2val = _read(datasets_path / "S2_Validation.csv")
-    df_psstrain = _read(datasets_path / "PS_Training.csv")
+    df_psstrain = _read(datasets_path / "PS_TrainTest.csv")
     df_pssval = _read(datasets_path / "PS_Validation.csv")
 
     return {
@@ -56,9 +56,9 @@ def sample_counts(datasets: dict) -> pd.DataFrame:
     pd.DataFrame with columns Sensor, Subset, Class, Points
     """
     subsets = {
-        ("S2", "Training"): "df_s2train",
+        ("S2", "Train-test"): "df_s2train",
         ("S2", "Validation"): "df_s2val",
-        ("PS", "Training"): "df_psstrain",
+        ("PS", "Train-test"): "df_psstrain",
         ("PS", "Validation"): "df_pssval",
     }
     rows = []

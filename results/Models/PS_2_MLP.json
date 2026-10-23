@@ -119,6 +119,6 @@
   ]
  },
  "random_state": 2025,
- "training_points": 36000,
+ "train_test_points": 36000,
  "scikit_learn": "1.9.0"
 }

@@ -4,12 +4,12 @@ tuning.py
 Hyperparameter tuning with Successive Halving (``HalvingRandomSearchCV``).
 
 Each candidate configuration is first evaluated on a small subsample of the
-training set; only the best third (``factor = 3``) advances to the next round,
+train-test set; only the best third (``factor = 3``) advances to the next round,
 which uses three times more samples, until the survivors are evaluated on the
-full training set.  Tuning uses only the training set (inner cross-validation),
+full train-test set.  Tuning uses only the train-test set (inner cross-validation),
 so the validation set remains fully held out for the reported metrics.
 
-Training points are only a few metres apart, so neighbouring points often fall
+Train-test points are only a few metres apart, so neighbouring points often fall
 in the same pixel.  With random folds, near-duplicates end up on both sides of
 a split and the search favours configurations that memorise them.  The inner
 folds are therefore grouped by labelled polygon and season: all points of a
@@ -109,9 +109,9 @@ def tune_model(model_name, model, X_train, y_train, groups, tuning: dict, random
     model : estimator
         Base (untrained) estimator; it is cloned, never modified.
     X_train, y_train : array-like
-        Raw (unscaled) training data.
+        Raw (unscaled) train-test data.
     groups : array-like
-        Group of each training point: polygon and season, or the point itself (see :func:`polygon_groups`).
+        Group of each train-test point: polygon and season, or the point itself (see :func:`polygon_groups`).
     tuning : dict
         ``n_candidates``, ``factor`` and ``cv_folds`` settings.
     random_state : int

@@ -14,21 +14,21 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
     - `download.py` — download the image dataset from Hugging Face (pinned dataset revision)
     - `preprocessing.py` — 3-time-series composites (30-day means) of PS and S2 from raw scenes (complete run)
     - `download_s2_gee.py` — S2 scenes with their Cloud Score+ cloud score from Google Earth Engine (complete run)
-    - `generate_data_points.py` — training/validation points from the reference polygons (complete run)
+    - `generate_data_points.py` — train-test/validation points from the reference polygons (complete run)
     - `training.py` — `train_and_evaluate_model` function
     - `tuning.py` — hyperparameter search spaces and Successive Halving tuning
     - `experiments.py` — per-experiment runners and dispatcher
     - `plotting.py` — all figure-generation functions
 
 `data/` - input data directory (mirrors Code Ocean's `/data`):
-- CSV training and validation datasets (included in the repository). The `Class` column holds the class code of each point (0 = plastic-mulched farmland, PMF; 1 = plastic greenhouses, PGH; 2 = others); the task is a single three-class problem (plastic-mulched farmland, plastic greenhouses and others) solved by one multiclass model per experiment.
+- CSV train-test and validation datasets (included in the repository). The `Class` column holds the class code of each point (0 = plastic-mulched farmland, PMF; 1 = plastic greenhouses, PGH; 2 = others); the task is a single three-class problem (plastic-mulched farmland, plastic greenhouses and others) solved by one multiclass model per experiment.
 - `composites/Sentinel-2/` — the S2 3-time-series composites (GeoTIFF, one per ROI and reference date) from the [Hugging Face dataset](https://huggingface.co/datasets/marlonfs/agricultural-plastic-PS-S2) (not included; about 0.9 GB). Full-image classification uses them; `run.py` downloads them into an empty folder when it is enabled, and `python -m src.download` from the `code` folder downloads them alone.
 - `composites/PlanetScope/` — the PS composites are **not distributed**: the scenes were obtained through Planet's Education and Research Program, whose terms do not allow sharing products that retain Planet's image data. Build them from your own Planet orders with `python -m src.preprocessing PS`; the instructions and the list of scenes used (`PS_scenes.csv`) are in [`data/composites/PlanetScope/README.md`](data/composites/PlanetScope/README.md). Without them, PS full-image classification is skipped; the point tables already hold the PS values used in the paper.
 - `raw/PlanetScope/`, `raw/Sentinel-2/`, `polygons/` — raw scenes and reference polygons, needed to rebuild the composites and the CSVs (see Data generation); the polygons are also drawn in SM Fig. B.5.
 
 `results/` - output directory for all generated files (mirrors Code Ocean's `/results`):
 - Classification maps (PNG and TIFF), metric tables, and figures
-- `sample_counts.csv` — number of training and validation points per sensor and class
+- `sample_counts.csv` — number of train-test and validation points per sensor and class
 - `model_results.csv` — OA, Cohen's kappa and macro F1 on the validation set with their 95 % confidence intervals (`CI Low`, `CI High`), training time (TT), image inference speed (IS) and selected hyperparameters of every model
 - `class_metrics.csv` — per-class precision, recall, F1 (with confidence intervals) and support on the validation set
 - `sensor_differences.csv` — OA difference S2 − PS for the same model and band set, with a paired confidence interval
@@ -68,7 +68,7 @@ All user-facing settings live in [`code/config.toml`](code/config.toml):
 | `data_generation.generate_points` | `true` to regenerate the four CSVs from the polygons and composites (also `--generate-points`; default `false`) |
 | `data_generation.first_year`, `last_year` | Reference dates are Jun-18 and Dec-15 of every year in this range |
 | `data_generation.windows` | Start and end (exclusive) of the t0, t1, t2 windows, in days from the reference date |
-| `data_generation.training_points`, `validation_points` | Points per class in each set |
+| `data_generation.train_test_points`, `validation_points` | Points per class in each set |
 | `data_generation.sentinel2.*` | S2 scene cloud filter (per window, from 20 % rising by 10 % until 3 days cover the ROI) and Cloud Score+ clear threshold (`cs_cdf_threshold`) |
 | `experiments` | List of experiment names to run |
 | `models` | List of models to run (empty list = all seven) |
@@ -95,9 +95,9 @@ The CSVs in `data/` can be rebuilt from raw scenes and reference polygons. These
 Composites are written to `data/composites/` and the four CSVs in `data/` are replaced; they gain the columns `Reference_Date` and `Polygon_ID` (the number, GeoPackage `fid`, of the labelled polygon a PMF or PGH point was drawn from, in the layer of its class; empty for "others"). Each CSV row is a random point inside one 10 m S2 pixel (one point per pixel and reference date) whose values come from the S2 pixel and from the 3 m PS pixel at the point.
 
 ## Hyperparameter tuning
-Every model is tuned with Successive Halving ([`HalvingRandomSearchCV`](https://scikit-learn.org/stable/modules/grid_search.html#successive-halving-user-guide)) before it is evaluated. For each model, `n_candidates` configurations are sampled from the search space in `src/tuning.py` and scored by stratified, spatially grouped cross-validation on a small subsample of the training set. Only the best `1/factor` of them advance to the next round, which uses `factor` times more samples, until the remaining configurations are scored on the full training set. The highest-scoring configuration (by overall accuracy) is then trained and evaluated as before.
+Every model is tuned with Successive Halving ([`HalvingRandomSearchCV`](https://scikit-learn.org/stable/modules/grid_search.html#successive-halving-user-guide)) before it is evaluated. For each model, `n_candidates` configurations are sampled from the search space in `src/tuning.py` and scored by stratified, spatially grouped cross-validation on a small subsample of the train-test set. Only the best `1/factor` of them advance to the next round, which uses `factor` times more samples, until the remaining configurations are scored on the full train-test set. The highest-scoring configuration (by overall accuracy) is then trained and evaluated as before.
 
-Training points are only a few metres apart, so neighbouring points often fall in the same pixel. With random folds, these near-duplicates end up on both sides of a split and the search favours configurations that memorise them. The inner folds are therefore grouped by labelled polygon and date (`Polygon_ID`, `Reference_Date`): all points of a polygon on one date stay in the same fold; each "others" point is its own group. The same field on another date is an independent group.
+Train-test points are only a few metres apart, so neighbouring points often fall in the same pixel. With random folds, these near-duplicates end up on both sides of a split and the search favours configurations that memorise them. The inner folds are therefore grouped by labelled polygon and date (`Polygon_ID`, `Reference_Date`): all points of a polygon on one date stay in the same fold; each "others" point is its own group. The same field on another date is an independent group.
 
 MLP and LinearSVC use a larger maximum number of iterations than the scikit-learn defaults (`max_iter` 1000 and 10,000, set in `src/config.py`): with the defaults (200 and 1000), MLP stopped before converging in some image sets and LinearSVC results varied with the random seed.
 

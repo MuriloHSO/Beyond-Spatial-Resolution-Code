@@ -17,16 +17,16 @@ random_state = 2025
 #                     window) of PS and S2 from the raw scenes in data/raw/
 #                     (src/preprocessing.py). S2 scenes are downloaded from
 #                     Google Earth Engine if missing (src/download_s2_gee.py).
-# generate_points   : draw the training/validation points from the reference
+# generate_points   : draw the train-test/validation points from the reference
 #                     polygons and extract their values from the composites,
-#                     rewriting data/{PS,S2}_{Training,Validation}.csv
+#                     rewriting data/{PS,S2}_{TrainTest,Validation}.csv
 #                     (src/generate_data_points.py).
 # first_year,
 # last_year         : reference dates are Jun-18 and Dec-15 of every year in
 #                     this range, the same for PS and S2.
 # windows           : start and end (exclusive) of each composite window, in
 #                     days from the reference date (t0, t1, t2).
-# training_points,
+# train_test_points,
 # validation_points : points per class in each set.
 # Packages: requirements-data.txt.
 
@@ -35,7 +35,7 @@ data_generation.generate_points = false
 data_generation.first_year = 2021
 data_generation.last_year = 2023
 data_generation.windows = [[-30, 0], [30, 60], [100, 130]]
-data_generation.training_points = 12000
+data_generation.train_test_points = 12000
 data_generation.validation_points = 4000
 
 # Sentinel-2 scene filter and Cloud Score+ mask.
@@ -82,7 +82,7 @@ models = [
 # -----------------------------------------------------------------------------
 # Hyperparameter tuning (Successive Halving, scikit-learn HalvingRandomSearchCV)
 #
-# enabled      : true to tune every model on the training set before it is
+# enabled      : true to tune every model on the train-test set before it is
 #                evaluated; false to use scikit-learn default hyperparameters.
 # n_candidates : number of random configurations sampled per model.  Each
 #                round keeps the best 1/factor of them and gives the
