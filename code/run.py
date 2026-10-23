@@ -42,7 +42,6 @@ Options
     --skip-plots                Do not generate figures after the experiments.
 """
 
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -79,14 +78,10 @@ def check_requirements(filename="requirements.txt"):
 check_requirements()
 
 import argparse
-import warnings
 
 import matplotlib
 matplotlib.use("Agg")  # Non-interactive backend suitable for Code Ocean
 from matplotlib import rc
-
-warnings.filterwarnings("ignore")
-os.environ["PYTHONWARNINGS"] = "ignore"  # also silence parallel (joblib) worker processes
 
 # ---------------------------------------------------------------------------
 # TOML loading (tomllib is part of the standard library; Python 3.12+ required)

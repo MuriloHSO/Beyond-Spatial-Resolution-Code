@@ -69,10 +69,6 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
     models_path = results_path / "Models"
 
-    logs_path = results_path / "Logs"
-
-    metadata_path = results_path / "Metadata"
-
     # Temporary/internal files, not part of the published results (git-ignored).
     scratch_path = base / "scratch"
 
@@ -91,8 +87,6 @@ def setup_paths(base: Path | str | None = None) -> dict:
         maps_png_path,
         maps_tif_path,
         models_path,
-        logs_path,
-        metadata_path,
         scratch_path,
     ]
 
@@ -121,8 +115,6 @@ def setup_paths(base: Path | str | None = None) -> dict:
         "maps_tif_path": maps_tif_path,
 
         "models_path": models_path,
-        "logs_path": logs_path,
-        "metadata_path": metadata_path,
         "scratch_path": scratch_path,
     }
 
