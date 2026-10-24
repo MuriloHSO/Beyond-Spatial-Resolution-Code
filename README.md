@@ -31,7 +31,7 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 - `sample_counts.csv` — number of train-test and validation points per sensor and class
 - `model_results.csv` — OA, Cohen's kappa and macro F1 on the validation set with their 95 % confidence intervals (`CI Low`, `CI High`), training time (TT), image inference speed (IS) and selected hyperparameters of every model
 - `class_metrics.csv` — per-class precision, recall, F1 (with confidence intervals) and support on the validation set
-- `sensor_differences.csv` — OA difference S2 − PS for the same model and band set, with a paired confidence interval
+- `sensor_differences.csv` — OA difference S2 − PS for the same model and band set, and their mean over all models and band sets (`Mean`), each with a paired confidence interval
 - `validation_predictions.csv.gz` — class predicted by every model for every validation point (`Point` = row of the validation CSV), from which all metrics and intervals can be recomputed
 - `Models/` — every fitted model: `<imagery>_<model>.joblib` (scaler + model, lzma-compressed; load only trusted files, with the pinned scikit-learn) and `<imagery>_<model>.json` (all hyperparameters, features, scaler statistics, seed and versions, enough to refit the model exactly). Only the JSON files are tracked in git
 - `confusion_matrices.csv` — confusion matrix of every model on the validation set (long format: true class, predicted class, count); `figures/Fig_B.7_confusion_matrices.png` shows those of the most accurate classifier of each experiment

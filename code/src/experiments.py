@@ -286,7 +286,7 @@ def _add_intervals(results, class_metrics, predictions, df_val, settings, random
     """
     Bootstrap confidence intervals of the validation metrics (class-stratified spatial
     blocks, the same resamples for every experiment and model) and the paired S2 - PS
-    differences of OA.
+    differences of OA (per classifier and band set, and their mean).
     """
     resamples = validation_resamples(df_val, settings, random_state)
     confidence = settings["confidence"]
@@ -313,13 +313,22 @@ def _add_intervals(results, class_metrics, predictions, df_val, settings, random
         class_metrics.insert(position + 1, f"{metric} CI High", [round(float(bounds[i, m][1][column[c]]), 6) for i, m, c in rows])
 
     oa = results.set_index(["Imagery", "Models"])["OA"]
-    differences = []
+    differences, pairs = [], []
     for bands, (s2, ps) in SENSOR_PAIRS.items():
         for model in results["Models"].unique():
             if (s2, model) in draws and (ps, model) in draws:
+                pairs.append((s2, ps, model))
                 low, high = interval(draws[s2, model]["OA"] - draws[ps, model]["OA"], confidence)
                 differences.append({"Models": model, "Bands": bands, "S2 Imagery": s2, "PS Imagery": ps,
                                     "OA Difference (S2 - PS)": round(float(oa[s2, model] - oa[ps, model]), 6),
                                     "CI Low": round(float(low), 6), "CI High": round(float(high), 6)})
+    # Mean over all pairs (classifiers and band sets), with the interval of the mean over the same resamples.
+    if pairs:
+        low, high = interval(np.mean([draws[s2, m]["OA"] - draws[ps, m]["OA"] for s2, ps, m in pairs], axis=0), confidence)
+        differences.append({"Models": "Mean", "Bands": "4 bands and all bands",
+                            "S2 Imagery": ", ".join(SENSOR_PAIRS[b][0] for b in SENSOR_PAIRS),
+                            "PS Imagery": ", ".join(SENSOR_PAIRS[b][1] for b in SENSOR_PAIRS),
+                            "OA Difference (S2 - PS)": round(float(np.mean([oa[s2, m] - oa[ps, m] for s2, ps, m in pairs])), 6),
+                            "CI Low": round(float(low), 6), "CI High": round(float(high), 6)})
     return results, class_metrics, pd.DataFrame(differences)
 
