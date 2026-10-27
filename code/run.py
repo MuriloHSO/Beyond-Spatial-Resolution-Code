@@ -6,6 +6,7 @@ run.py
 ├── ensure_composites()
 ├── load_datasets()
 ├── run_all_experiments()
+├── run_swir_ablation()  (optional)
 ├── generate_figures()
 ├── write_metadata(...)
 └── finish()
@@ -39,6 +40,8 @@ Options
                                 experiment (overrides config.toml per-entry flag)
     --no-image                  Disable full-image classification for every
                                 experiment (overrides config.toml per-entry flag)
+    --swir-ablation             Also run the S2 SWIR ablation (four bands plus SWIR;
+                                all bands without SWIR) after the four experiments.
     --skip-plots                Do not generate figures after the experiments.
 """
 
@@ -178,6 +181,11 @@ def parse_args(argv=None):
     )
 
     parser.add_argument(
+        "--swir-ablation", action="store_true", default=False,
+        help="Also run the S2 SWIR ablation (four bands plus SWIR; all bands without SWIR).",
+    )
+
+    parser.add_argument(
         "--skip-plots", action="store_true", default=False,
         help="Skip figure generation after the experiments.",
     )
@@ -241,6 +249,7 @@ def resolve_config(args) -> dict:
 
     # --- skip_plots ---
     skip_plots = args.skip_plots or toml.get("skip_plots", False)
+    swir_ablation = args.swir_ablation or toml.get("swir_ablation", False)
 
     # --- hyperparameter tuning ---
     tuning = {**_FALLBACK_TUNING, **toml.get("tuning", {})}
@@ -259,6 +268,7 @@ def resolve_config(args) -> dict:
         "selected_experiments": selected_experiments,
         "image": image,
         "skip_plots": skip_plots,
+        "swir_ablation": swir_ablation,
         "tuning": tuning,
         "uncertainty": uncertainty,
         "data_generation": data_generation,
@@ -386,6 +396,9 @@ def main(argv=None):
         f"  Intervals     : {uncertainty['confidence']:.0%} class-stratified bootstrap of the validation "
         f"points by polygon ({uncertainty['n_resamples']} resamples)"
     )
+    # The ablation is compared with the four experiments of the same run.
+    swir_ablation = cfg["swir_ablation"] and set(exp_names) == set(ALL_EXPERIMENTS)
+    print(f"  SWIR ablation : {'enabled (S2 with/without SWIR)' if swir_ablation else 'skipped'}")
     print(f"  Figures       : {'skipped' if cfg['skip_plots'] else 'enabled'}")
     data_generation = cfg["data_generation"]
     data_steps = [
@@ -404,6 +417,8 @@ def main(argv=None):
         + ("  [+tuning]" if tuning["enabled"] else "")
         + ("  [+image]" if any_img else "") + ")",
     ]
+    if swir_ablation:
+        plan_steps.append(f"Run S2 SWIR ablation  (2 image sets × {len(model_names)} model(s))")
     if not cfg["skip_plots"]:
         plan_steps.append("Generate figures")
     total_steps = len(plan_steps)
@@ -442,6 +457,7 @@ def main(argv=None):
         plot_confusion_matrices,
     )
     from src.visual_inspection import plot_visual_inspection
+    from src.swir_ablation import run_swir_ablation
 
     paths = setup_paths(base=base)
     
@@ -521,6 +537,14 @@ def main(argv=None):
     RESULTS_FILE = paths["results_path"] / RESULTS_FILENAME
     CONFUSION_FILE = paths["results_path"] / RESULTS_FILENAME.replace("model_results", "confusion_matrices")
     print(f"      Results -> {RESULTS_FILE}")
+
+    # -- Optional step: S2 SWIR ablation (SM Section B.3) --------
+    if swir_ablation:
+        step += 1
+        print(f"\n[{step}/{total_steps}] Running the S2 SWIR ablation...")
+        run_swir_ablation(build_models(cfg["random_state"], cfg["enabled_models"]), datasets, paths,
+                          tuning=tuning, random_state=cfg["random_state"], uncertainty=cfg["uncertainty"])
+        print("    [OK] SWIR ablation complete (results/swir_ablation/).")
 
     # -- Step 3 (optional): Generate figures ---------------------
     if cfg["skip_plots"]:

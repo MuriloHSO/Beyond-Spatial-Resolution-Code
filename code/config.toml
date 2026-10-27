@@ -127,5 +127,12 @@ uncertainty.n_resamples = 2000
 uncertainty.confidence = 0.95
 
 # -----------------------------------------------------------------------------
+# S2 SWIR ablation (SM Section B.3): two more S2 image sets, the four equivalent
+# bands plus SWIR (B11, B12) and all bands without SWIR (B2-B8A), tuned and
+# validated like the experiments and compared with them. Runs only when all
+# four experiments are selected; outputs in results/swir_ablation/.
+swir_ablation = false
+
+# -----------------------------------------------------------------------------
 # Whether to generate figures after the experiments.
 skip_plots = false

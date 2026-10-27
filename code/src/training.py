@@ -82,6 +82,7 @@ def train_and_evaluate_model(
     random_state: int = DEFAULT_RANDOM_STATE,
     groups=None,
     models_path=None,
+    save_fitted: bool = True,
 ) -> tuple:
     """
     Train every model in *models*, evaluate on the validation set and (optionally)
@@ -116,6 +117,8 @@ def train_and_evaluate_model(
         Where each fitted model is saved: ``<imagery>_<model>.joblib`` (scaler +
         model, lzma-compressed) and ``<imagery>_<model>.json`` (hyperparameters,
         features, scaler statistics, versions). Not saved when ``None``.
+    save_fitted : bool
+        If ``False``, only the JSON record is saved (no ``.joblib``).
 
     Returns
     -------
@@ -236,7 +239,7 @@ def train_and_evaluate_model(
 
         if models_path is not None:
             _save_model(models_path, name, model_name, scaler, model, list(X_train.columns),
-                        best_params, random_state, len(y_train))
+                        best_params, random_state, len(y_train), save_fitted)
         prediction_frames.append(pd.DataFrame({
             "Imagery": name, "Models": model_name, "Point": np.asarray(y_val.index),
             "True Class": np.asarray(y_val), "Predicted Class": y_pred,
@@ -347,10 +350,11 @@ def train_and_evaluate_model(
 
 
 def _save_model(models_path, imagery, model_name, scaler, model, features, best_params,
-                random_state, n_train) -> None:
-    """Save the fitted scaler + model (joblib, lzma) and a JSON record that allows an exact refit."""
+                random_state, n_train, save_fitted=True) -> None:
+    """Save the fitted scaler + model (joblib, lzma; unless *save_fitted* is False) and a JSON record that allows an exact refit."""
     stem = Path(models_path) / f"{imagery}_{model_name}"
-    joblib.dump(Pipeline([("scaler", scaler), ("model", model)]), f"{stem}.joblib", compress=("lzma", 6))
+    if save_fitted:
+        joblib.dump(Pipeline([("scaler", scaler), ("model", model)]), f"{stem}.joblib", compress=("lzma", 6))
     record = {
         "imagery": imagery,
         "model": model_name,
