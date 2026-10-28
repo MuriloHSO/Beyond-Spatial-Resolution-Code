@@ -38,6 +38,10 @@ ALG_COLORS = {
 }
 
 PREFERRED_ALG_ORDER = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVC_rbf"]
+# Classifier names as printed in the paper (the code keeps the run keys).
+MODEL_LABELS = {"KNN": "kNN", "SVC_rbf": r"SVC$_{rbf}$"}
+# Mathtext (the "rbf" subscript) in the serif font of the figure text.
+plt.rcParams.update({"mathtext.fontset": "custom", "mathtext.rm": "serif", "mathtext.it": "serif:italic"})
 IMAGERY_MARKERS = {"S2": "^", "PS": "o"}
 
 
@@ -95,6 +99,12 @@ def extract_band_count(imagery_name):
 
 def normalize_model_name(model_name):
     return str(model_name).strip()
+
+
+def model_label(model_name):
+    """Classifier name as printed in the paper (KNN -> kNN, SVC_rbf -> SVC with subscript rbf)."""
+    name = normalize_model_name(model_name)
+    return MODEL_LABELS.get(name, name)
 
 
 def infer_imagery_set(imagery_name):
@@ -500,7 +510,7 @@ def plot_scatter_from_mode(
         bbox_to_anchor=(1, 1), frameon=False,
     )
     legend2 = plt.legend(
-        alg_legend_handles, alg_legend_labels,
+        alg_legend_handles, [model_label(a) for a in alg_legend_labels],
         title="Algorithm", fontsize=8, loc="lower left",
         bbox_to_anchor=(1, 0.53), frameon=False,
     )
@@ -640,10 +650,10 @@ def plot_oa_kappa_bars(results_file, results_path):
         y_ps_low,  e_ps_low  = bar_values(data["ps_low"])
         y_ps_high, e_ps_high = bar_values(data["ps_high"])
 
-        ax.bar(x - 1.5 * w, y_s2_low,  w, yerr=e_s2_low,  color="lightskyblue", capsize=3, linewidth=0, label="S2_1 (4 bands)")
-        ax.bar(x - 0.5 * w, y_s2_high, w, yerr=e_s2_high, color="steelblue",    capsize=3, linewidth=0, label="S2_2 (all bands)")
-        ax.bar(x + 0.5 * w, y_ps_low,  w, yerr=e_ps_low,  color="#F29A8E",      capsize=3, linewidth=0, label="PS_1 (4 bands)")
-        ax.bar(x + 1.5 * w, y_ps_high, w, yerr=e_ps_high, color="#E85C4A",      capsize=3, linewidth=0, label="PS_2 (all bands)")
+        ax.bar(x - 1.5 * w, y_s2_low,  w, yerr=e_s2_low,  color="lightskyblue", capsize=3, linewidth=0, label="S2 4-bands")
+        ax.bar(x - 0.5 * w, y_s2_high, w, yerr=e_s2_high, color="steelblue",    capsize=3, linewidth=0, label="S2 10-bands")
+        ax.bar(x + 0.5 * w, y_ps_low,  w, yerr=e_ps_low,  color="#F29A8E",      capsize=3, linewidth=0, label="PS 4-bands")
+        ax.bar(x + 1.5 * w, y_ps_high, w, yerr=e_ps_high, color="#E85C4A",      capsize=3, linewidth=0, label="PS 8-bands")
 
         all_vals = np.concatenate([y_s2_low - e_s2_low[0], y_s2_high - e_s2_high[0], y_ps_low - e_ps_low[0], y_ps_high - e_ps_high[0],
                                    y_s2_low + e_s2_low[1], y_s2_high + e_s2_high[1], y_ps_low + e_ps_low[1], y_ps_high + e_ps_high[1]])
@@ -665,7 +675,7 @@ def plot_oa_kappa_bars(results_file, results_path):
 
     ax1.tick_params(axis="x", which="both", labelbottom=False)
     ax2.set_xticks(x)
-    ax2.set_xticklabels(final_models, rotation=45, ha="right")
+    ax2.set_xticklabels([model_label(m) for m in final_models], rotation=45, ha="right")
     ax2.set_xlabel("Models")
 
     output_name = "Fig_B.4"
@@ -771,7 +781,7 @@ def plot_satellite_impact(results_file, results_path):
 
     ax.set_xlabel("Models")
     ax.set_xticks(x)
-    ax.set_xticklabels(sat_diff_df["Model"], rotation=45)
+    ax.set_xticklabels(sat_diff_df["Model"].map(model_label), rotation=45)
     ax.set_ylabel("Time increase (%)")
     ax.legend()
 
@@ -860,7 +870,7 @@ def plot_band_impact(results_file, results_path):
 
     ax.set_xlabel("Models")
     ax.set_xticks(x)
-    ax.set_xticklabels(imgdf_bands["Model"], rotation=45)
+    ax.set_xticklabels(imgdf_bands["Model"].map(model_label), rotation=45)
     ax.set_ylabel("Time increase (%)")
     ax.legend()
 
@@ -953,10 +963,10 @@ def plot_scatter_combined(plot_data, results_path):
 # ---------------------------------------------------------------------------
 
 IMAGE_SET_TITLES = {
-    "S2_1": "S2 (4 bands)",
-    "S2_2": "S2 (10 bands)",
-    "PS_1": "PS (4 bands)",
-    "PS_2": "PS (8 bands)",
+    "S2_1": "S2 4-bands",
+    "S2_2": "S2 10-bands",
+    "PS_1": "PS 4-bands",
+    "PS_2": "PS 8-bands",
 }
 
 
@@ -1003,8 +1013,7 @@ def plot_confusion_matrices(results_file, confusion_file, results_path, class_na
         ax.set_yticklabels(tick_labels)
         ax.set_xlabel("Predicted class")
         ax.set_ylabel("True class")
-        model_label = normalize_model_name(model).replace("_", " ")  # SVC_rbf -> SVC rbf, as in the paper
-        ax.set_title(f"{IMAGE_SET_TITLES[image_set]}: {model_label} (OA = {oa:.3f})", fontsize=11)
+        ax.set_title(f"{IMAGE_SET_TITLES[image_set]}: {model_label(model)} (OA = {oa:.3f})", fontsize=11)
 
     for ax in axes.flat[len(image_sets):]:
         ax.axis("off")
