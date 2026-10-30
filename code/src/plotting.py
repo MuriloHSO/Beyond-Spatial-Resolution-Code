@@ -912,7 +912,7 @@ def plot_confusion_matrices(results_file, confusion_file, results_path, class_na
     Confusion matrices on the validation set of the most accurate classifier (highest OA)
     of each image set, one panel per image set.  Cells show the share of each true class
     (row-normalised, equal to the recall on the diagonal) and the number of points.
-    Saved to ``Fig_B.7_confusion_matrices.png``.
+    Saved to ``Fig_B.6_confusion_matrices.png``.
     """
     df_results = load_results_dataframe(results_file)
     df_cm = load_results_dataframe(confusion_file)
@@ -956,5 +956,5 @@ def plot_confusion_matrices(results_file, confusion_file, results_path, class_na
         ax.axis("off")
 
     fig.tight_layout()
-    fig.savefig(results_path / "Fig_B.7_confusion_matrices.png", dpi=400, bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(results_path / "Fig_B.6_confusion_matrices.png", dpi=400, bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)

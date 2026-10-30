@@ -1,7 +1,7 @@
 """
 visual_inspection.py
 --------------------
-SM Fig. B.5: visual inspection of the classifications of S2 and PS in four windows.
+Main Fig. 2: visual inspection of the classifications of S2 and PS in four windows.
 
 The windows were chosen from the validation points (SVC rbf, all bands), each at a different location and
 date: a PMF field where PS missed most validation points (A), a greenhouse area where both sensors classified
@@ -38,7 +38,7 @@ from scipy import ndimage
 from .data import _read
 from .experiments import PS_BANDS_ALL, S2_BANDS_ALL
 
-FIGURE = "Fig_B.5_visual_inspection.png"
+FIGURE = "Figure_2_visual_inspection.png"
 TABLE = "visual_inspection_panels.csv"
 
 # Windows of 900 m x 816 m (centres in EPSG:32723). t: time step of the background (0-2).
@@ -197,7 +197,7 @@ def _validation_points(paths, results_path):
 
 
 def plot_visual_inspection(paths: dict, results_path: Path, figures_path: Path) -> None:
-    """Draw SM Fig. B.5 and write the panel numbers given in the SM text (results/visual_inspection_panels.csv)."""
+    """Draw main Fig. 2 and write the panel numbers given in the SM text (results/visual_inspection_panels.csv)."""
     needed = [_composite(paths, s, p["roi"], p["date"]) for p in PANELS for s in ("PS", "S2")]
     needed += [paths["models_path"] / f"{s}_2_SVC_rbf.joblib" for s in ("PS", "S2")]
     missing = sorted({str(f) for f in needed if not Path(f).exists()})
