@@ -59,7 +59,7 @@ def run_swir_ablation(models, datasets, paths, tuning=None, random_state=DEFAULT
     for name, bands in IMAGE_SETS.items():
         features = [c for c in S2_BANDS_ALL if c.rsplit("_", 1)[0] in bands]
         print(f"\n  + {name} ({', '.join(bands)})")
-        _, res, cls, _, pred = train_and_evaluate_model(
+        res, cls, _, pred = train_and_evaluate_model(
             train[features], val[features], train["Class"], val["Class"], models, None, paths["maps_path"],
             apply_model_on_image=False, condition_label=name, tuning=tuning, random_state=random_state,
             groups=groups, models_path=models_path, save_fitted=False,

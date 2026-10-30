@@ -63,24 +63,12 @@ def marker_area_factor(marker):
 # Small utility functions
 # ---------------------------------------------------------------------------
 
-def pick_column(df, candidates, label):
-    for col in candidates:
-        if col in df.columns:
-            return col
-
-    normalized_map = {
-        "".join(ch for ch in str(col).lower() if ch.isalnum()): col
-        for col in df.columns
-    }
-    for col in candidates:
-        normalized = "".join(ch for ch in str(col).lower() if ch.isalnum())
-        if normalized in normalized_map:
-            return normalized_map[normalized]
-
-    raise ValueError(
-        f"Column for '{label}' not found. Candidates: {candidates}. "
-        f"Available columns: {list(df.columns)}"
-    )
+# Columns of results/model_results.csv used by the figures.
+IMAGERY_COL = "Imagery"
+MODEL_COL = "Models"
+OA_COL = "OA"
+CT_COL = "Classification Time (s)"
+TT_COL = "Training Time (s)"
 
 
 def extract_condition_level(imagery_name):
@@ -169,33 +157,7 @@ def load_results_dataframe(results_file):
 
 
 def resolve_time_columns(df_results):
-    imagery_col = pick_column(df_results, ["Imagery", "imagery", "Condition", "Dataset", "Image"], "imagery")
-    model_col = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "model")
-    ct_col = pick_column(
-        df_results,
-        [
-            "Classification Time (s)",
-            "Classification Time",
-            "Classification_Time",
-            "Class Time (s)",
-            "Class Time",
-            "CT",
-        ],
-        "classification time",
-    )
-    tt_col = pick_column(
-        df_results,
-        [
-            "Training Time (s)",
-            "Training Time",
-            "Training_Time",
-            "Train Time (s)",
-            "Train Time",
-            "TT",
-        ],
-        "training time",
-    )
-    return imagery_col, model_col, ct_col, tt_col
+    return IMAGERY_COL, MODEL_COL, CT_COL, TT_COL
 
 
 def build_time_metrics_dataframe(df_results):
@@ -260,33 +222,11 @@ def select_imagery_by_level(imagery_names, target_level):
 def load_plot_data(results_file):
     df_results = load_results_dataframe(results_file)
 
-    imagery_col = pick_column(df_results, ["Imagery", "imagery", "Condition", "Dataset", "Image"], "imagery")
-    model_col = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "model")
-    oa_col = pick_column(df_results, ["OA", "Overall Accuracy", "overall_accuracy", "Accuracy"], "OA")
-    ct_col = pick_column(
-        df_results,
-        [
-            "Classification Time (s)",
-            "Classification Time",
-            "Classification_Time",
-            "Class Time (s)",
-            "Class Time",
-            "CT",
-        ],
-        "classification time",
-    )
-    tt_col = pick_column(
-        df_results,
-        [
-            "Training Time (s)",
-            "Training Time",
-            "Training_Time",
-            "Train Time (s)",
-            "Train Time",
-            "TT",
-        ],
-        "training time",
-    )
+    imagery_col = IMAGERY_COL
+    model_col = MODEL_COL
+    oa_col = OA_COL
+    ct_col = CT_COL
+    tt_col = TT_COL
 
     df_metrics = df_results[[imagery_col, model_col, oa_col, ct_col, tt_col]].copy()
     df_metrics[oa_col] = pd.to_numeric(df_metrics[oa_col], errors="coerce")
@@ -561,9 +501,6 @@ def plot_oa_kappa_bars(results_file, results_path):
     PREFERRED_MODEL_ORDER = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVC_rbf"]
 
     df_results = load_results_dataframe(results_file)
-    imagery_col_local = pick_column(df_results, ["Imagery", "imagery", "Condition", "Dataset", "Image"], "imagery")
-    model_col_local = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "model")
-    df_results = df_results.rename(columns={imagery_col_local: "Imagery", model_col_local: "Models"})
     df_results["Models"] = df_results["Models"].map(normalize_model_name)
 
     def get_band_count(cond):

@@ -76,8 +76,8 @@ def train_and_evaluate_model(
     models: dict,
     imagery,
     results_path,
+    condition_label: str,
     apply_model_on_image: bool = True,
-    condition_label=None,
     tuning: dict = None,
     random_state: int = DEFAULT_RANDOM_STATE,
     groups=None,
@@ -100,11 +100,11 @@ def train_and_evaluate_model(
         *apply_model_on_image* is ``False``.
     results_path : Path
         Where PNG / TIFF outputs are written.
+    condition_label : str
+        Name of the image set (e.g. ``"S2_1"``) in the results tables and model files.
     apply_model_on_image : bool
         If ``False`` the image is never read; classification time is reported
         as NaN.
-    condition_label : str, optional
-        Overrides the auto-generated experiment name.
     tuning : dict, optional
         Successive Halving settings (see :func:`src.tuning.tune_model`).  If
         ``None`` or ``tuning["enabled"]`` is ``False``, the default
@@ -122,7 +122,7 @@ def train_and_evaluate_model(
 
     Returns
     -------
-    (params, results_df, class_metrics_df, confusion_df, predictions_df)
+    (results_df, class_metrics_df, confusion_df, predictions_df)
         ``class_metrics_df`` has the per-class precision, recall, F1 and support on the
         validation set; ``confusion_df`` has the confusion matrix in long format
         (true class, predicted class, count); ``predictions_df`` has the predicted
@@ -133,16 +133,7 @@ def train_and_evaluate_model(
     X_val_norm = scaler.transform(X_val)
 
     filename = Path(imagery).stem if imagery is not None else "dataset"
-    if condition_label is not None:
-        name = str(condition_label)
-    else:
-        sat_prefix = (
-            "S2"
-            if filename.upper().startswith("S2")
-            else ("PS" if filename.upper().startswith("PS") else "IMG")
-        )
-        condition_idx = 1 if X_train.shape[1] <= 12 else 2
-        name = f"{sat_prefix}_{condition_idx}"
+    name = str(condition_label)
 
     image_features = None
     meta = None
@@ -189,7 +180,6 @@ def train_and_evaluate_model(
             del image, img, image_reshaped, image_imputed
             gc.collect()
     # Train and evaluate models
-    params = []
     results = []
     class_rows = []
     confusion_rows = []
@@ -271,7 +261,6 @@ def train_and_evaluate_model(
         if best_params:
             print(f"  {'|' if model_idx < n_models else ' '}      best: {_format_params(best_params)}")
 
-        params.append(model.get_params(deep=True))
         results.append(
             [
                 name,
@@ -346,7 +335,7 @@ def train_and_evaluate_model(
     )
     predictions_df = pd.concat(prediction_frames, ignore_index=True)
 
-    return params, results_df, class_metrics_df, confusion_df, predictions_df
+    return results_df, class_metrics_df, confusion_df, predictions_df
 
 
 def _save_model(models_path, imagery, model_name, scaler, model, features, best_params,

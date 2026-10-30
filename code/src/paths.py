@@ -63,10 +63,6 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
     maps_path = results_path / "maps"
 
-    maps_png_path = maps_path / "PNG"
-
-    maps_tif_path = maps_path / "TIFF"
-
     models_path = results_path / "Models"
 
     # Temporary/internal files, not part of the published results (git-ignored).
@@ -84,8 +80,8 @@ def setup_paths(base: Path | str | None = None) -> dict:
         results_path,
         figures_path,
         maps_path,
-        maps_png_path,
-        maps_tif_path,
+        maps_path / "PNG",   # classification maps, written by src.training
+        maps_path / "TIFF",
         models_path,
         scratch_path,
     ]
@@ -111,8 +107,6 @@ def setup_paths(base: Path | str | None = None) -> dict:
         "figures_path": figures_path,
 
         "maps_path": maps_path,
-        "maps_png_path": maps_png_path,
-        "maps_tif_path": maps_tif_path,
 
         "models_path": models_path,
         "scratch_path": scratch_path,
@@ -140,22 +134,4 @@ def get_image_lists(paths: dict) -> dict:
     return {
         "S2": sorted(paths["S2_composites"].glob("S2_*.tif")),
         "PS": sorted(paths["PS_composites"].glob("PS_*.tif")),
-    }
-
-
-def count_images(paths: dict) -> dict:
-    """
-    Count available images.
-
-    Returns
-    -------
-    dict
-        {"S2": n, "PS": n}
-    """
-
-    images = get_image_lists(paths)
-
-    return {
-        key: len(value)
-        for key, value in images.items()
     }

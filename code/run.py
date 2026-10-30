@@ -8,7 +8,6 @@ run.py
 ├── run_all_experiments()
 ├── run_swir_ablation()  (optional)
 ├── generate_figures()
-├── write_metadata(...)
 └── finish()
 ------
 Configuration is read from config.toml in the same directory as this file.
@@ -37,9 +36,9 @@ Options
     --no-tuning                 Use default hyperparameters (skip the
                                 Successive Halving search in config.toml)
     --apply-on-image            Force full-image classification for every
-                                experiment (overrides config.toml per-entry flag)
+                                experiment (overrides apply_model_on_image)
     --no-image                  Disable full-image classification for every
-                                experiment (overrides config.toml per-entry flag)
+                                experiment (overrides apply_model_on_image)
     --swir-ablation             Also run the S2 SWIR ablation (four bands plus SWIR;
                                 all bands without SWIR) after the four experiments.
     --skip-plots                Do not generate figures after the experiments.
@@ -109,10 +108,8 @@ def load_toml_config(path: Path) -> dict:
 ALL_MODELS = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVC_rbf"]
 ALL_EXPERIMENTS = ["S2_4b", "S2_Allb", "PS_4b", "PS_Allb"]
 
-# Fallback defaults (used when config.toml is missing and no CLI flag is given)
-_FALLBACK_RANDOM_STATE = 2025  # same as src.config.DEFAULT_RANDOM_STATE
-_FALLBACK_IMAGE = "Holambra_2022-12-15"  # same as src.experiments.DEFAULT_IMAGE
-_FALLBACK_MODELS: list = []          # empty → all models
+# Fallback settings (used when config.toml is missing and no CLI flag is given); the random state
+# and the image fall back to src.config.DEFAULT_RANDOM_STATE and src.experiments.DEFAULT_IMAGE.
 _FALLBACK_TUNING = {
     "enabled": True,
     "n_candidates": 81,
@@ -123,12 +120,6 @@ _FALLBACK_UNCERTAINTY = {
     "n_resamples": 2000,
     "confidence": 0.95,
 }
-_FALLBACK_EXPERIMENTS = [
-    {"name": "S2_4b",   "apply_model_on_image": True},
-    {"name": "S2_Allb", "apply_model_on_image": True},
-    {"name": "PS_4b",   "apply_model_on_image": True},
-    {"name": "PS_Allb", "apply_model_on_image": True},
-]
 
 # ---------------------------------------------------------------------------
 # CLI parsing
@@ -200,6 +191,9 @@ def parse_args(argv=None):
 
 def resolve_config(args) -> dict:
     """Merge config.toml values with CLI overrides and return a final config dict."""
+    from src.config import DEFAULT_RANDOM_STATE
+    from src.experiments import DEFAULT_IMAGE
+
     # Determine which TOML file to load
     script_dir = Path(__file__).resolve().parent
     config_path = args.config if args.config is not None else script_dir / "config.toml"
@@ -209,7 +203,7 @@ def resolve_config(args) -> dict:
     random_state = (
         args.random_state                           # CLI wins
         if args.random_state is not None
-        else toml.get("random_state", _FALLBACK_RANDOM_STATE)
+        else toml.get("random_state", DEFAULT_RANDOM_STATE)
     )
 
     # --- enabled models ---
@@ -217,11 +211,11 @@ def resolve_config(args) -> dict:
         # CLI wins
         enabled_models = args.models if args.models else None
     else:
-        toml_models = toml.get("models", _FALLBACK_MODELS)
+        toml_models = toml.get("models", [])
         enabled_models = toml_models if toml_models else None   # [] → None (all)
 
     # --- experiments ---
-    # apply_model_on_image is now a single global boolean in config.toml
+    # apply_model_on_image is one boolean for every experiment
     apply_flag = bool(toml.get("apply_model_on_image", True))
 
     if args.experiments is not None:
@@ -231,7 +225,7 @@ def resolve_config(args) -> dict:
             for name in args.experiments
         ]
     else:
-        exp_names = toml.get("experiments", [e["name"] for e in _FALLBACK_EXPERIMENTS])
+        exp_names = toml.get("experiments", ALL_EXPERIMENTS)
         selected_experiments = [
             {"name": name, "apply_model_on_image": apply_flag}
             for name in exp_names
@@ -245,7 +239,7 @@ def resolve_config(args) -> dict:
         for exp in selected_experiments:
             exp["apply_model_on_image"] = False
 
-    image = toml.get("image", _FALLBACK_IMAGE)
+    image = toml.get("image", DEFAULT_IMAGE)
 
     # --- skip_plots ---
     skip_plots = args.skip_plots or toml.get("skip_plots", False)

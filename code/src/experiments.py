@@ -64,96 +64,76 @@ def _get_imagery(paths, sensor, image=DEFAULT_IMAGE):
 # Individual experiment runners
 # ---------------------------------------------------------------------------
 
-def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image=True, save_csv=True,
+def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image,
                          tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
     X,  y  = datasets["df_s2train"][S2_BANDS_4], datasets["df_s2train"]["Class"]
     groups = _tuning_groups(datasets["df_s2train"], tuning)
     X2, y2 = datasets["df_s2val"][S2_BANDS_4],   datasets["df_s2val"]["Class"]
 
     imagery = _get_imagery(paths, "S2", image)
-    params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
+    return train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
-        apply_model_on_image=apply_model_on_image,
         condition_label="S2_1",
+        apply_model_on_image=apply_model_on_image,
         tuning=tuning,
         random_state=random_state,
         groups=groups,
         models_path=paths["models_path"],
     )
 
-    if save_csv:
-        results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "S2_4b.csv", index=False)
 
-    return params, results, class_metrics, confusion, predictions
-
-
-def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
+def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image,
                          tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
     X,  y  = datasets["df_s2train"][S2_BANDS_ALL], datasets["df_s2train"]["Class"]
     groups = _tuning_groups(datasets["df_s2train"], tuning)
     X2, y2 = datasets["df_s2val"][S2_BANDS_ALL],   datasets["df_s2val"]["Class"]
 
     imagery = _get_imagery(paths, "S2", image)
-    params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
+    return train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
-        apply_model_on_image=apply_model_on_image,
         condition_label="S2_2",
+        apply_model_on_image=apply_model_on_image,
         tuning=tuning,
         random_state=random_state,
         groups=groups,
         models_path=paths["models_path"],
     )
 
-    if save_csv:
-        results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "S2_Allb.csv", index=False)
 
-    return params, results, class_metrics, confusion, predictions
-
-
-def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image=False, save_csv=True,
+def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image,
                          tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
     X,  y  = datasets["df_psstrain"][PS_BANDS_4], datasets["df_psstrain"]["Class"]
     groups = _tuning_groups(datasets["df_psstrain"], tuning)
     X2, y2 = datasets["df_pssval"][PS_BANDS_4],   datasets["df_pssval"]["Class"]
 
     imagery = _get_imagery(paths, "PS", image)
-    params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
+    return train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
-        apply_model_on_image=apply_model_on_image,
         condition_label="PS_1",
+        apply_model_on_image=apply_model_on_image,
         tuning=tuning,
         random_state=random_state,
         groups=groups,
         models_path=paths["models_path"],
     )
 
-    if save_csv:
-        results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "PS_4b.csv", index=False)
 
-    return params, results, class_metrics, confusion, predictions
-
-
-def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image=True, save_csv=True,
+def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image,
                          tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
     X,  y  = datasets["df_psstrain"][PS_BANDS_ALL], datasets["df_psstrain"]["Class"]
     groups = _tuning_groups(datasets["df_psstrain"], tuning)
     X2, y2 = datasets["df_pssval"][PS_BANDS_ALL],   datasets["df_pssval"]["Class"]
 
     imagery = _get_imagery(paths, "PS", image)
-    params, results, class_metrics, confusion, predictions = train_and_evaluate_model(
+    return train_and_evaluate_model(
         X, X2, y, y2, models, imagery, paths["maps_path"],
-        apply_model_on_image=apply_model_on_image,
         condition_label="PS_2",
+        apply_model_on_image=apply_model_on_image,
         tuning=tuning,
         random_state=random_state,
         groups=groups,
         models_path=paths["models_path"],
     )
-
-    if save_csv:
-        results.drop(columns=INTERNAL_COLUMNS).to_csv(paths["results_path"] / "PS_Allb.csv", index=False)
-
-    return params, results, class_metrics, confusion, predictions
 
 
 # ---------------------------------------------------------------------------
@@ -235,12 +215,11 @@ def run_all_experiments(
         img_note = "  [+image]" if apply_flag else ""
         print(f"\n  + [{exp_i}/{n_exps}] {name}{img_note}")
 
-        _params, results_i, class_metrics_i, confusion_i, predictions_i = EXPERIMENT_QUEUE[name](
+        results_i, class_metrics_i, confusion_i, predictions_i = EXPERIMENT_QUEUE[name](
             models=models,
             datasets=datasets,
             paths=paths,
             apply_model_on_image=apply_flag,
-            save_csv=False,
             tuning=tuning,
             random_state=random_state,
             image=image,
