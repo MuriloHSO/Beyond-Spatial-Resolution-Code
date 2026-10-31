@@ -109,7 +109,8 @@ Error bars and intervals describe the uncertainty of the validation metrics. Poi
 
 ## Licences
 - Code: MIT (`code/LICENSE`).
-- Data in `data/` (S2 point CSVs) and the [Hugging Face dataset](https://huggingface.co/datasets/marlonfs/agricultural-plastic-PS-S2) (S2 composites, S2 point CSVs, reference polygons, classification maps, list of PS scenes): CC BY-NC 4.0 (`data/LICENSE`), for noncommercial use. Contains modified Copernicus Sentinel data 2021–2023.
+- Data in `data/` (S2 point CSVs, list of PS scenes) and the [Hugging Face dataset](https://huggingface.co/datasets/marlonfs/agricultural-plastic-PS-S2) (S2 composites, S2 point CSVs, reference polygons, S2 classification maps, list of PS scenes): CC BY 4.0 (`data/LICENSE`). Contains modified Copernicus Sentinel data 2021–2023.
+- Classification maps from PS data (Hugging Face dataset): CC BY-NC 4.0, for noncommercial use (derived from Planet data; they hold only predicted classes).
 - PlanetScope data (© 2021–2023 Planet Labs PBC), obtained through Planet's Education and Research Program, are not redistributed: neither the scenes, the composites nor the PS point CSVs, which hold mean PS reflectance values. Rebuild them from your own Planet access (see `data/composites/PlanetScope/README.md`).
 
 ## Declaration of AI-assisted coding
