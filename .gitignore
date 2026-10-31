@@ -1,4 +1,16 @@
-/data/
+# Input data: ignored, except the files shared in the repository.
+# PlanetScope scenes, composites and point tables must never be committed (Planet Education and Research terms).
+/data/*
+!/data/LICENSE
+!/data/S2_TrainTest.csv
+!/data/S2_Validation.csv
+!/data/composites/
+/data/composites/*
+!/data/composites/PlanetScope/
+/data/composites/PlanetScope/*
+!/data/composites/PlanetScope/README.md
+!/data/composites/PlanetScope/PS_scenes.csv
+
 __pycache__/
 scratch/
 
