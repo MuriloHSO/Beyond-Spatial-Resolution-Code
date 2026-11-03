@@ -1,1 +1,40 @@
-/data/
+# Input data: ignored, except the files shared in the repository.
+# PlanetScope scenes, composites and point tables must never be committed (Planet Education and Research terms).
+/data/*
+!/data/LICENSE
+!/data/S2_TrainTest.csv
+!/data/S2_Validation.csv
+!/data/composites/
+/data/composites/*
+!/data/composites/PlanetScope/
+/data/composites/PlanetScope/*
+!/data/composites/PlanetScope/README.md
+!/data/composites/PlanetScope/PS_scenes.csv
+
+__pycache__/
+scratch/
+
+# Claude Code (local only)
+CLAUDE.md
+claude/
+.claude/
+
+# Ignore local environment files
+.env
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore VS Code settings
+.vscode/
+
+# Ignore Hugging Face cache
+cache/
+data\.cache\huggingface
+
+
+# Fitted models (pickle-based, version-bound): kept locally and on Code Ocean; the JSON records are tracked
+results/Models/*.joblib
+
+# Ignore results maps
+results/maps/

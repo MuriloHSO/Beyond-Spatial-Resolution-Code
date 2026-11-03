@@ -4,6 +4,8 @@ name: 'Beyond Spatial Resolution: Comparing Sentinel-2 and PlanetScope Imagery f
 description: |-
   ### Beyond Spatial Resolution: Comparing Sentinel-2 and PlanetScope Imagery for APS Mapping
 
+  DOI: [10.24433/CO.7671752.v1](https://doi.org/10.24433/CO.7671752.v1)
+
   This capsule contains the reference code for the paper ["Beyond Spatial Resolution: Comparing
   Sentinel-2 and PlanetScope Imagery for Agricultural Plastic Remote
   Mapping"](https://openreview.net/forum?id=KrttzXQWRe), presented at the [4th Machine Learning for Remote Sensing (ML4RS) Workshop](https://ml-for-rs.github.io/iclr2026/) of [ICLR 2026](https://iclr.cc/) and now under review in IEEE GRSL. The paper investigates the trade-off between the higher spatial and temporal resolutions of PlanetScope (PS) and the computational demands associated with its larger data volume, comparing it with Sentinel-2 (S2) in mapping Agricultural Plastic Structures (APS).

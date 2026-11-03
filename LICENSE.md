@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Murilo H.S. Oliveira, Fernando K.I. Fugihara e Marlon F. de Souza
+Copyright (c) 2026 Marlon F. de Souza, Murilo H.S. de Oliveira and Fernando K.I. Fugihara
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

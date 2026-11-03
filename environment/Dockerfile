@@ -1,4 +1,4 @@
-# hash:sha256:72e104d2fc34f198acd229894c11ad18adf8f853acad4facde828e22792e4e16
+# hash:sha256:a2f25225273173908533bb8ef186540656bd20df2f8735cd91d9eff1c7024db9
 FROM registry.codeocean.com/codeocean/ubuntu:22.04.1
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -6,6 +6,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential=12.9ubuntu3 \
+        curl=7.81.0-1ubuntu1.25 \
         gdal-bin=3.4.1+dfsg-1build4 \
         libgdal-dev=3.4.1+dfsg-1build4 \
         python3=3.10.6-1~22.04.1 \

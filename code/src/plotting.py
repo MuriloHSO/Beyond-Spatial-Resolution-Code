@@ -16,10 +16,11 @@ from pathlib import Path
 import matplotlib.colors as mcolors
 import matplotlib.image as mpimg
 import matplotlib.lines as mlines
+import matplotlib.markers as mmarkers
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.ticker import FormatStrFormatter
+from matplotlib.ticker import FormatStrFormatter, MaxNLocator
 
 
 # ---------------------------------------------------------------------------
@@ -37,31 +38,37 @@ ALG_COLORS = {
 }
 
 PREFERRED_ALG_ORDER = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVC_rbf"]
+# Classifier names as printed in the paper (the code keeps the run keys).
+MODEL_LABELS = {"KNN": "kNN", "SVC_rbf": r"SVC$_{rbf}$"}
+# Mathtext (the "rbf" subscript) in the serif font of the figure text.
+plt.rcParams.update({"mathtext.fontset": "custom", "mathtext.rm": "serif", "mathtext.it": "serif:italic"})
 IMAGERY_MARKERS = {"S2": "^", "PS": "o"}
+
+
+def marker_area_factor(marker):
+    """Scatter size factor that gives `marker` the filled area of a circle ("o") of the same size.
+
+    At equal scatter size s, matplotlib's markers cover different areas (circle 0.785 s, triangle 0.5 s), so
+    without this factor a triangle would show a smaller training time than a circle of the same value.
+    """
+    def unit_area(m):
+        style = mmarkers.MarkerStyle(m)
+        x, y = style.get_path().transformed(style.get_transform()).to_polygons()[0].T
+        return 0.5 * abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+
+    return unit_area("o") / unit_area(marker)
 
 
 # ---------------------------------------------------------------------------
 # Small utility functions
 # ---------------------------------------------------------------------------
 
-def pick_column(df, candidates, label):
-    for col in candidates:
-        if col in df.columns:
-            return col
-
-    normalized_map = {
-        "".join(ch for ch in str(col).lower() if ch.isalnum()): col
-        for col in df.columns
-    }
-    for col in candidates:
-        normalized = "".join(ch for ch in str(col).lower() if ch.isalnum())
-        if normalized in normalized_map:
-            return normalized_map[normalized]
-
-    raise ValueError(
-        f"Column for '{label}' not found. Candidates: {candidates}. "
-        f"Available columns: {list(df.columns)}"
-    )
+# Columns of results/model_results.csv used by the figures.
+IMAGERY_COL = "Imagery"
+MODEL_COL = "Models"
+OA_COL = "OA"
+CT_COL = "Classification Time (s)"
+TT_COL = "Training Time (s)"
 
 
 def extract_condition_level(imagery_name):
@@ -80,6 +87,12 @@ def extract_band_count(imagery_name):
 
 def normalize_model_name(model_name):
     return str(model_name).strip()
+
+
+def model_label(model_name):
+    """Classifier name as printed in the paper (KNN -> kNN, SVC_rbf -> SVC with subscript rbf)."""
+    name = normalize_model_name(model_name)
+    return MODEL_LABELS.get(name, name)
 
 
 def infer_imagery_set(imagery_name):
@@ -140,37 +153,11 @@ def pick_low_high_imagery(condition_names):
 def load_results_dataframe(results_file):
     if not Path(results_file).exists():
         raise FileNotFoundError(f"Results file not found: {results_file}")
-    return pd.read_excel(results_file)
+    return pd.read_csv(results_file)
 
 
 def resolve_time_columns(df_results):
-    imagery_col = pick_column(df_results, ["Imagery", "imagery", "Condition", "Dataset", "Image"], "imagery")
-    model_col = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "model")
-    ct_col = pick_column(
-        df_results,
-        [
-            "Classification Time (s)",
-            "Classification Time",
-            "Classification_Time",
-            "Class Time (s)",
-            "Class Time",
-            "CT",
-        ],
-        "classification time",
-    )
-    tt_col = pick_column(
-        df_results,
-        [
-            "Training Time (s)",
-            "Training Time",
-            "Training_Time",
-            "Train Time (s)",
-            "Train Time",
-            "TT",
-        ],
-        "training time",
-    )
-    return imagery_col, model_col, ct_col, tt_col
+    return IMAGERY_COL, MODEL_COL, CT_COL, TT_COL
 
 
 def build_time_metrics_dataframe(df_results):
@@ -235,33 +222,11 @@ def select_imagery_by_level(imagery_names, target_level):
 def load_plot_data(results_file):
     df_results = load_results_dataframe(results_file)
 
-    imagery_col = pick_column(df_results, ["Imagery", "imagery", "Condition", "Dataset", "Image"], "imagery")
-    model_col = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "model")
-    oa_col = pick_column(df_results, ["OA", "Overall Accuracy", "overall_accuracy", "Accuracy"], "OA")
-    ct_col = pick_column(
-        df_results,
-        [
-            "Classification Time (s)",
-            "Classification Time",
-            "Classification_Time",
-            "Class Time (s)",
-            "Class Time",
-            "CT",
-        ],
-        "classification time",
-    )
-    tt_col = pick_column(
-        df_results,
-        [
-            "Training Time (s)",
-            "Training Time",
-            "Training_Time",
-            "Train Time (s)",
-            "Train Time",
-            "TT",
-        ],
-        "training time",
-    )
+    imagery_col = IMAGERY_COL
+    model_col = MODEL_COL
+    oa_col = OA_COL
+    ct_col = CT_COL
+    tt_col = TT_COL
 
     df_metrics = df_results[[imagery_col, model_col, oa_col, ct_col, tt_col]].copy()
     df_metrics[oa_col] = pd.to_numeric(df_metrics[oa_col], errors="coerce")
@@ -283,7 +248,7 @@ def load_plot_data(results_file):
     )
 
     if grouped.empty:
-        raise ValueError("No valid data was loaded from the XLSX file.")
+        raise ValueError("No valid data was loaded from the results file.")
 
     imagery_names = [str(x).strip() for x in grouped[imagery_col].unique()]
     all_data = nested_dict_from_grouped(grouped, imagery_col, model_col, oa_col, ct_col, tt_col)
@@ -356,7 +321,7 @@ def plot_scatter_from_mode(
     results_path,
     mode="both",
     output_name="figure.png",
-    marker_scale_factor=1.5,
+    max_point_size=24.0 ** 2,
     min_point_size=18,
     save_dpi=400,
     show_xlabel=True,
@@ -375,7 +340,9 @@ def plot_scatter_from_mode(
         Directory where the figure is saved.
     mode : {'both', 'all', '4'}
     output_name : str
-    marker_scale_factor, min_point_size, save_dpi : plot tuning
+    max_point_size, min_point_size, save_dpi : plot tuning. Marker area (points^2) is proportional to the
+        training time: the longest training time of all image sets gets max_point_size, so every panel and
+        the size legend share one scale.
     show_xlabel : bool
     bands : bool
         Whether to show the band legend.
@@ -392,6 +359,13 @@ def plot_scatter_from_mode(
 
     alg_legend = {}
     imagery_legend = {}
+
+    # One scale for all panels: the longest training time of every image set gets max_point_size.
+    longest_tt = max(tt for mode_data in plot_data["data_by_mode"].values()
+                     for alg_data in mode_data.values() for (_, _, tt) in alg_data.values())
+
+    def area(training_time):
+        return max(min_point_size, max_point_size * training_time / longest_tt)
 
     level_map = plot_data["level_map"]
     band_map = plot_data["band_map"]
@@ -410,8 +384,7 @@ def plot_scatter_from_mode(
 
         plot_items = []
         for alg, (oa, classification_time, training_time) in alg_data.items():
-            point_size = (training_time * 100 if training_time < 0.5 else training_time * 35) * marker_scale_factor
-            point_size = max(min_point_size, point_size)
+            point_size = area(training_time) * marker_area_factor(marker)  # equal filled area per TT
             plot_items.append((alg, oa, classification_time, point_size))
 
         plot_items.sort(key=lambda item: item[3], reverse=True)
@@ -454,26 +427,22 @@ def plot_scatter_from_mode(
                       linestyle="None", markersize=8, label="All bands"),
     ]
 
-    size_legend_values = [0.01, 17.16, 34.32]
-    size_legend_markers = [3.5, 12.6, 23.8]
+    # Size legend: values near 1/10, 1/2 and 1 of the longest training time (one significant figure), drawn with the same area as
+    # the points (Line2D markersize is a diameter: sqrt of the scatter area).
+    def round_value(x):
+        return float(f"{x:.1g}")  # one significant figure
+
+    size_legend_values = [round_value(longest_tt * f) for f in (0.1, 0.5, 1.0)]
     size_legend = [
         mlines.Line2D(
             [0], [0],
             color="gray", marker="o", linestyle="None",
-            markersize=marker_size * marker_scale_factor,
+            markersize=np.sqrt(area(value)),
             markerfacecolor="gray", markeredgecolor="gray",
-            label=f"{value:.2f}",
+            label=f"{value:g}",
         )
-        for marker_size, value in zip(size_legend_markers, size_legend_values)
+        for value in size_legend_values
     ]
-
-    title_to_first_gap = 0.0
-    gap_1_to_2 = 0.8
-    gap_2_to_3 = 2.8
-
-    training_legend_anchor_x = 1.2
-    training_legend_anchor_y = 0.3
-    third_item_offset_y = 0.035 + 0.02 * gap_2_to_3
 
     legend1 = plt.legend(
         imagery_legend_handles, imagery_legend_labels,
@@ -481,32 +450,21 @@ def plot_scatter_from_mode(
         bbox_to_anchor=(1, 1), frameon=False,
     )
     legend2 = plt.legend(
-        alg_legend_handles, alg_legend_labels,
+        alg_legend_handles, [model_label(a) for a in alg_legend_labels],
         title="Algorithm", fontsize=8, loc="lower left",
         bbox_to_anchor=(1, 0.53), frameon=False,
     )
     plt.gca().add_artist(legend1)
-
-    legend3_top = plt.legend(
-        handles=size_legend[:2],
+    # One size legend: the three entries share the handle column, so their labels line up.
+    legend3 = plt.legend(
+        handles=size_legend,
         title="Training Time (s)", fontsize=8,
-        loc="lower right",
-        bbox_to_anchor=(training_legend_anchor_x - 0.008, training_legend_anchor_y),
-        frameon=False, handlelength=1.0, handletextpad=2.8,
-        labelspacing=gap_1_to_2, handleheight=3.5,
+        loc="upper left", bbox_to_anchor=(1, 0.5),
+        frameon=False, handlelength=2.0, handleheight=2.0, handletextpad=1.0, labelspacing=1.6,
+        borderpad=0.6,
     )
-    legend3_top._legend_box.sep = title_to_first_gap
-
-    legend3_bottom = plt.legend(
-        handles=[size_legend[2]], fontsize=8,
-        loc="lower right",
-        bbox_to_anchor=(training_legend_anchor_x - 0.0285,
-                        training_legend_anchor_y - third_item_offset_y),
-        frameon=False, handlelength=1.0, handletextpad=3.5,
-    )
-
     plt.gca().add_artist(legend2)
-    plt.gca().add_artist(legend3_top)
+    plt.gca().add_artist(legend3)
 
     if bands or mode in {"all", "4"}:
         plt.legend(
@@ -514,10 +472,10 @@ def plot_scatter_from_mode(
             title="Band configuration", fontsize=8,
             loc="lower left", bbox_to_anchor=(1, 0.00), frameon=False,
         )
-        plt.gca().add_artist(legend3_bottom)
 
     plt.grid(True, which="major", linestyle="--", linewidth=0.5, alpha=0.7)
     plt.xscale("log")
+    plt.margins(x=0.06, y=0.08)  # room for the largest markers at the edges
     if show_xlabel:
         plt.xlabel("Inference Speed (s)")
     plt.ylabel("Overall Accuracy (OA)")
@@ -543,9 +501,6 @@ def plot_oa_kappa_bars(results_file, results_path):
     PREFERRED_MODEL_ORDER = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVC_rbf"]
 
     df_results = load_results_dataframe(results_file)
-    imagery_col_local = pick_column(df_results, ["Imagery", "imagery", "Condition", "Dataset", "Image"], "imagery")
-    model_col_local = pick_column(df_results, ["Models", "Model", "Algorithm", "Classifier", "Classificador"], "model")
-    df_results = df_results.rename(columns={imagery_col_local: "Imagery", model_col_local: "Models"})
     df_results["Models"] = df_results["Models"].map(normalize_model_name)
 
     def get_band_count(cond):
@@ -562,14 +517,11 @@ def plot_oa_kappa_bars(results_file, results_path):
         conds_sorted = sorted(conds, key=lambda c: get_band_count(c) if get_band_count(c) is not None else 999)
         return conds_sorted[0], conds_sorted[-1]
 
-    def get_metric_std_col(df_in, std_candidates):
-        return next((c for c in std_candidates if c in df_in.columns), None)
-
-    def prepare_metric_frames(df_in, metric_col, std_col):
-        if metric_col not in df_in.columns:
-            raise ValueError(f"Required column not found: {metric_col}")
-        if std_col is None:
-            raise ValueError(f"Standard deviation column not found for {metric_col}.")
+    def prepare_metric_frames(df_in, metric_col):
+        low_col, high_col = f"{metric_col} CI Low", f"{metric_col} CI High"
+        for col in (metric_col, low_col, high_col):
+            if col not in df_in.columns:
+                raise ValueError(f"Required column not found: {col}")
 
         s2_low, s2_high = pick_conditions(df_in, "S2")
         ps_low, ps_high = pick_conditions(df_in, "PS")
@@ -577,8 +529,8 @@ def plot_oa_kappa_bars(results_file, results_path):
             raise ValueError("Could not identify two conditions for S2 and PS.")
 
         def get_cond_df(cond_name):
-            out = df_in[df_in["Imagery"].astype(str) == cond_name][["Models", metric_col, std_col]].copy()
-            return out.rename(columns={metric_col: "value", std_col: "std"}).set_index("Models")
+            out = df_in[df_in["Imagery"].astype(str) == cond_name][["Models", metric_col, low_col, high_col]].copy()
+            return out.rename(columns={metric_col: "value", low_col: "low", high_col: "high"}).set_index("Models")
 
         df_s2_low  = get_cond_df(s2_low)
         df_s2_high = get_cond_df(s2_high)
@@ -604,14 +556,8 @@ def plot_oa_kappa_bars(results_file, results_path):
             "ps_high": df_ps_high.loc[common_models],
         }
 
-    oa_std_candidates    = ["OA Std (KFold)", "OA Std", "OA_std", "Accuracy Std (KFold)", "accuracy_std"]
-    kappa_std_candidates = ["Kappa Std (KFold)", "Kappa Std", "Kappa_std", "kappa_std"]
-
-    oa_std_col    = get_metric_std_col(df_results, oa_std_candidates)
-    kappa_std_col = get_metric_std_col(df_results, kappa_std_candidates)
-
-    oa_data    = prepare_metric_frames(df_results, metric_col="OA",    std_col=oa_std_col)
-    kappa_data = prepare_metric_frames(df_results, metric_col="Kappa", std_col=kappa_std_col)
+    oa_data    = prepare_metric_frames(df_results, metric_col="OA")
+    kappa_data = prepare_metric_frames(df_results, metric_col="Kappa")
 
     final_models = [m for m in oa_data["models"] if m in set(kappa_data["models"])]
     if not final_models:
@@ -628,42 +574,45 @@ def plot_oa_kappa_bars(results_file, results_path):
         nrows=2, ncols=1, figsize=(9.4, 10),
         sharex=True, gridspec_kw={"hspace": 0.18},
     )
-    fig.subplots_adjust(left=0.09, right=0.985, top=0.985, bottom=0.085, hspace=0.18)
+    fig.subplots_adjust(left=0.09, right=0.985, top=0.95, bottom=0.085, hspace=0.18)
 
     def plot_metric_panel(ax, data, ylabel):
-        y_s2_low  = data["s2_low"]["value"].astype(float).values
-        e_s2_low  = data["s2_low"]["std"].fillna(0).astype(float).values
-        y_s2_high = data["s2_high"]["value"].astype(float).values
-        e_s2_high = data["s2_high"]["std"].fillna(0).astype(float).values
-        y_ps_low  = data["ps_low"]["value"].astype(float).values
-        e_ps_low  = data["ps_low"]["std"].fillna(0).astype(float).values
-        y_ps_high = data["ps_high"]["value"].astype(float).values
-        e_ps_high = data["ps_high"]["std"].fillna(0).astype(float).values
+        def bar_values(frame):
+            # Error bars: 95 % bootstrap interval of the validation metric (asymmetric)
+            value = frame["value"].astype(float).values
+            return value, np.vstack([value - frame["low"].astype(float).values, frame["high"].astype(float).values - value])
 
-        ax.bar(x - 1.5 * w, y_s2_low,  w, yerr=e_s2_low,  color="lightskyblue", capsize=3, linewidth=0, label="S2_1 (4 bands)")
-        ax.bar(x - 0.5 * w, y_s2_high, w, yerr=e_s2_high, color="steelblue",    capsize=3, linewidth=0, label="S2_2 (all bands)")
-        ax.bar(x + 0.5 * w, y_ps_low,  w, yerr=e_ps_low,  color="#F29A8E",      capsize=3, linewidth=0, label="PS_1 (4 bands)")
-        ax.bar(x + 1.5 * w, y_ps_high, w, yerr=e_ps_high, color="#E85C4A",      capsize=3, linewidth=0, label="PS_2 (all bands)")
+        y_s2_low,  e_s2_low  = bar_values(data["s2_low"])
+        y_s2_high, e_s2_high = bar_values(data["s2_high"])
+        y_ps_low,  e_ps_low  = bar_values(data["ps_low"])
+        y_ps_high, e_ps_high = bar_values(data["ps_high"])
 
-        all_vals = np.concatenate([y_s2_low, y_s2_high, y_ps_low, y_ps_high])
+        ax.bar(x - 1.5 * w, y_s2_low,  w, yerr=e_s2_low,  color="lightskyblue", capsize=3, linewidth=0, label="S2 4-bands")
+        ax.bar(x - 0.5 * w, y_s2_high, w, yerr=e_s2_high, color="steelblue",    capsize=3, linewidth=0, label="S2 10-bands")
+        ax.bar(x + 0.5 * w, y_ps_low,  w, yerr=e_ps_low,  color="#F29A8E",      capsize=3, linewidth=0, label="PS 4-bands")
+        ax.bar(x + 1.5 * w, y_ps_high, w, yerr=e_ps_high, color="#E85C4A",      capsize=3, linewidth=0, label="PS 8-bands")
+
+        all_vals = np.concatenate([y_s2_low - e_s2_low[0], y_s2_high - e_s2_high[0], y_ps_low - e_ps_low[0], y_ps_high - e_ps_high[0],
+                                   y_s2_low + e_s2_low[1], y_s2_high + e_s2_high[1], y_ps_low + e_ps_low[1], y_ps_high + e_ps_high[1]])
         y_min = max(0.0, float(np.min(all_vals)) - 0.005)
         y_max = min(1.0, float(np.max(all_vals)) + 0.005)
         ax.set_ylim(y_min, y_max)
-        ax.set_yticks(np.arange(y_min, y_max + 0.0001, 0.005))
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=8))
         ax.yaxis.set_major_formatter(FormatStrFormatter("%.3f"))
         ax.set_ylabel(ylabel)
         ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.7)
-        ax.legend(loc="lower right", frameon=True, facecolor="white", edgecolor="0.65", framealpha=0.95)
 
     plot_metric_panel(ax1, oa_data,    ylabel="Overall Accuracy (OA)")
     plot_metric_panel(ax2, kappa_data, ylabel="Cohen's Kappa (k)")
 
+    # One legend above the panels, so it never covers bars or error bars
+    ax1.legend(loc="lower center", bbox_to_anchor=(0.5, 1.01), ncol=4, frameon=False)
     ax1.text(0.01, 0.92, "(a)", transform=ax1.transAxes, fontsize=18, fontweight="bold", va="top")
     ax2.text(0.01, 0.92, "(b)", transform=ax2.transAxes, fontsize=18, fontweight="bold", va="top")
 
     ax1.tick_params(axis="x", which="both", labelbottom=False)
     ax2.set_xticks(x)
-    ax2.set_xticklabels(final_models, rotation=45, ha="right")
+    ax2.set_xticklabels([model_label(m) for m in final_models], rotation=45, ha="right")
     ax2.set_xlabel("Models")
 
     output_name = "Fig_B.4"
@@ -769,7 +718,7 @@ def plot_satellite_impact(results_file, results_path):
 
     ax.set_xlabel("Models")
     ax.set_xticks(x)
-    ax.set_xticklabels(sat_diff_df["Model"], rotation=45)
+    ax.set_xticklabels(sat_diff_df["Model"].map(model_label), rotation=45)
     ax.set_ylabel("Time increase (%)")
     ax.legend()
 
@@ -858,7 +807,7 @@ def plot_band_impact(results_file, results_path):
 
     ax.set_xlabel("Models")
     ax.set_xticks(x)
-    ax.set_xticklabels(imgdf_bands["Model"], rotation=45)
+    ax.set_xticklabels(imgdf_bands["Model"].map(model_label), rotation=45)
     ax.set_ylabel("Time increase (%)")
     ax.legend()
 
@@ -944,3 +893,68 @@ def plot_scatter_combined(plot_data, results_path):
     fig2.savefig(results_path / f"{output_name_scatter}.png", dpi=400, bbox_inches="tight", pad_inches=0.02)
     plt.show()
     #print(f"Figure: {output_name_scatter}.png")
+
+
+# ---------------------------------------------------------------------------
+# Confusion matrices
+# ---------------------------------------------------------------------------
+
+IMAGE_SET_TITLES = {
+    "S2_1": "S2 4-bands",
+    "S2_2": "S2 10-bands",
+    "PS_1": "PS 4-bands",
+    "PS_2": "PS 8-bands",
+}
+
+
+def plot_confusion_matrices(results_file, confusion_file, results_path, class_names=None):
+    """
+    Confusion matrices on the validation set of the most accurate classifier (highest OA)
+    of each image set, one panel per image set.  Cells show the share of each true class
+    (row-normalised, equal to the recall on the diagonal) and the number of points.
+    Saved to ``Fig_B.6_confusion_matrices.png``.
+    """
+    df_results = load_results_dataframe(results_file)
+    df_cm = load_results_dataframe(confusion_file)
+    labels = sorted(df_cm["True Class"].unique())
+    class_names = class_names or {}
+    tick_labels = [class_names.get(label, str(label)) for label in labels]
+
+    image_sets = [s for s in IMAGE_SET_TITLES if s in set(df_results["Imagery"])]
+    best = df_results.loc[df_results.groupby("Imagery")["OA"].idxmax(), ["Imagery", "Models", "OA"]]
+    best = best.set_index("Imagery")
+
+    n_cols = 2
+    n_rows = int(np.ceil(len(image_sets) / n_cols))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(9.0, 4.3 * n_rows), squeeze=False)
+
+    for ax, image_set in zip(axes.flat, image_sets):
+        model, oa = best.loc[image_set, "Models"], best.loc[image_set, "OA"]
+        sub = df_cm[(df_cm["Imagery"] == image_set) & (df_cm["Models"] == model)]
+        counts = (
+            sub.pivot(index="True Class", columns="Predicted Class", values="Count")
+            .reindex(index=labels, columns=labels)
+            .to_numpy()
+        )
+        shares = counts / counts.sum(axis=1, keepdims=True)
+
+        ax.imshow(shares, cmap="Blues", vmin=0, vmax=1)
+        for i in range(len(labels)):
+            for j in range(len(labels)):
+                color = "white" if shares[i, j] > 0.5 else "black"
+                ax.text(j, i, f"{shares[i, j]:.1%}\n({counts[i, j]})",
+                        ha="center", va="center", fontsize=10, color=color)
+        ax.set_xticks(range(len(labels)))
+        ax.set_yticks(range(len(labels)))
+        ax.set_xticklabels(tick_labels)
+        ax.set_yticklabels(tick_labels)
+        ax.set_xlabel("Predicted class")
+        ax.set_ylabel("True class")
+        ax.set_title(f"{IMAGE_SET_TITLES[image_set]}: {model_label(model)} (OA = {oa:.3f})", fontsize=11)
+
+    for ax in axes.flat[len(image_sets):]:
+        ax.axis("off")
+
+    fig.tight_layout()
+    fig.savefig(results_path / "Fig_B.6_confusion_matrices.png", dpi=400, bbox_inches="tight", pad_inches=0.02)
+    plt.close(fig)

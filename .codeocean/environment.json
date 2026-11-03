@@ -10,6 +10,10 @@
 					"version": "12.9ubuntu3"
 				},
 				{
+					"name": "curl",
+					"version": "7.81.0-1ubuntu1.25"
+				},
+				{
 					"name": "gdal-bin",
 					"version": "3.4.1+dfsg-1build4"
 				},

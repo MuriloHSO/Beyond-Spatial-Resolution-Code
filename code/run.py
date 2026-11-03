@@ -3,11 +3,11 @@ run.py
 │
 ├── parse config.toml
 ├── setup_paths()
-├── ensure_imagery()
+├── ensure_composites()
 ├── load_datasets()
 ├── run_all_experiments()
+├── run_swir_ablation()  (optional)
 ├── generate_figures()
-├── write_metadata(...)
 └── finish()
 ------
 Configuration is read from config.toml in the same directory as this file.
@@ -23,86 +23,77 @@ Options
 -------
     --config PATH               Path to a TOML config file
                                 (default: config.toml next to this script)
-    --random-state INT          Random seed for classifiers
-    --models MODEL [MODEL ...]  Models to run; omit to use config.toml value.
-                                Valid: CART KNN MLP RF SGDC LinearSVC SVC_rbf
+    --random-state INT          Random seed for the classifiers, CV splits and
+                                hyperparameter search
+    --preprocess                Build the PS and S2 composites from the raw
+                                scenes in data/raw/ (complete run)
+    --generate-points           Regenerate the train-test/validation CSVs from
+                                the polygons and composites (complete run)
     --experiments EXP [EXP ...] Experiments to run; omit to use config.toml.
                                 Valid: S2_4b S2_Allb PS_4b PS_Allb
+    --models MODEL [MODEL ...]  Models to run; omit to use config.toml value.
+                                Valid: CART KNN MLP RF SGDC LinearSVC SVC_rbf
+    --no-tuning                 Use default hyperparameters (skip the
+                                Successive Halving search in config.toml)
     --apply-on-image            Force full-image classification for every
-                                experiment (overrides config.toml per-entry flag)
+                                experiment (overrides apply_model_on_image)
     --no-image                  Disable full-image classification for every
-                                experiment (overrides config.toml per-entry flag)
+                                experiment (overrides apply_model_on_image)
+    --swir-ablation             Also run the S2 SWIR ablation (four bands plus SWIR;
+                                all bands without SWIR) after the four experiments.
     --skip-plots                Do not generate figures after the experiments.
 """
 
-import os
 import subprocess
 import sys
 from pathlib import Path
 
 
-def check_requirements():
-    """Check if required packages are installed, and run pip install if not."""
-    req_file = Path(__file__).parent / "requirements.txt"
+def check_requirements(filename="requirements.txt"):
+    """Compare installed package versions with the pins in *filename*; install only if they differ."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    req_file = Path(__file__).parent / filename
     if not req_file.exists():
         return
 
-    try:
-        import warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            import pkg_resources  # type: ignore[import-not-found]
-    except ImportError:
-        # If pkg_resources is missing, just try running pip install directly
-        print("Checking requirements...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", str(req_file)])
-        return
-
-    # Parse requirements.txt
+    mismatches = []
     with open(req_file, "r") as f:
-        requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            name, _, pinned = line.partition("==")
+            try:
+                installed = version(name)
+            except PackageNotFoundError:
+                installed = None
+            if pinned and installed != pinned:
+                mismatches.append(f"{name} (installed {installed}, required {pinned})")
 
-    try:
-        pkg_resources.require(requirements)
-    except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict) as e:
-        print(f"Missing or outdated dependency: {e.req}")
-        print("Installing required packages...")
+    if mismatches:
+        print(f"Packages differ from {filename}:\n  " + "\n  ".join(mismatches))
+        print("Installing the required versions...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", str(req_file)])
         print("Dependencies installed successfully.\n")
 
 check_requirements()
 
 import argparse
-import warnings
 
 import matplotlib
 matplotlib.use("Agg")  # Non-interactive backend suitable for Code Ocean
 from matplotlib import rc
 
-warnings.filterwarnings("ignore")
-
 # ---------------------------------------------------------------------------
-# TOML loading (tomllib is built-in for Python 3.11+; fall back to tomli)
+# TOML loading (tomllib is part of the standard library; Python 3.12+ required)
 # ---------------------------------------------------------------------------
 
-try:
-    import tomllib                          # Python 3.11+
-except ModuleNotFoundError:
-    try:
-        import tomli as tomllib             # pip install tomli
-    except ModuleNotFoundError:
-        tomllib = None
+import tomllib
 
 
 def load_toml_config(path: Path) -> dict:
-    """Load a TOML config file. Returns an empty dict if TOML is unavailable."""
-    if tomllib is None:
-        print(
-            f"WARNING: Could not import 'tomllib' or 'tomli'. "
-            f"Config file '{path}' will be ignored.\n"
-            f"  On Python <3.11 run: pip install tomli"
-        )
-        return {}
+    """Load a TOML config file. Returns an empty dict if the file is missing."""
     if not path.exists():
         print(f"WARNING: Config file not found at '{path}'. Using defaults.")
         return {}
@@ -117,15 +108,18 @@ def load_toml_config(path: Path) -> dict:
 ALL_MODELS = ["CART", "KNN", "MLP", "RF", "SGDC", "LinearSVC", "SVC_rbf"]
 ALL_EXPERIMENTS = ["S2_4b", "S2_Allb", "PS_4b", "PS_Allb"]
 
-# Fallback defaults (used when config.toml is missing and no CLI flag is given)
-_FALLBACK_RANDOM_STATE = 2025
-_FALLBACK_MODELS: list = []          # empty → all models
-_FALLBACK_EXPERIMENTS = [
-    {"name": "S2_4b",   "apply_model_on_image": True},
-    {"name": "S2_Allb", "apply_model_on_image": True},
-    {"name": "PS_4b",   "apply_model_on_image": True},
-    {"name": "PS_Allb", "apply_model_on_image": True},
-]
+# Fallback settings (used when config.toml is missing and no CLI flag is given); the random state
+# and the image fall back to src.config.DEFAULT_RANDOM_STATE and src.experiments.DEFAULT_IMAGE.
+_FALLBACK_TUNING = {
+    "enabled": True,
+    "n_candidates": 81,
+    "factor": 3,
+    "cv_folds": 5,
+}
+_FALLBACK_UNCERTAINTY = {
+    "n_resamples": 2000,
+    "confidence": 0.95,
+}
 
 # ---------------------------------------------------------------------------
 # CLI parsing
@@ -143,15 +137,27 @@ def parse_args(argv=None):
     )
     parser.add_argument(
         "--random-state", type=int, default=None,
-        help="Random seed for all classifiers.",
+        help="Random seed for the classifiers, CV splits and hyperparameter search.",
+    )
+    parser.add_argument(
+        "--preprocess", action="store_true", default=False,
+        help="Build the PS and S2 composites from the raw scenes in data/raw/ (complete run).",
+    )
+    parser.add_argument(
+        "--generate-points", action="store_true", default=False,
+        help="Regenerate data/{PS,S2}_{TrainTest,Validation}.csv from the polygons and composites (complete run).",
+    )
+    parser.add_argument(
+        "--experiments", nargs="+", choices=ALL_EXPERIMENTS, default=None,
+        help="Subset of experiments to run. Omit to use config.toml value.",
     )
     parser.add_argument(
         "--models", nargs="+", choices=ALL_MODELS, default=None,
         help="Subset of models to run. Omit to use config.toml value.",
     )
     parser.add_argument(
-        "--experiments", nargs="+", choices=ALL_EXPERIMENTS, default=None,
-        help="Subset of experiments to run. Omit to use config.toml value.",
+        "--no-tuning", action="store_true", default=False,
+        help="Use default hyperparameters instead of the Successive Halving search.",
     )
 
     # Mutually exclusive image-classification overrides
@@ -163,6 +169,11 @@ def parse_args(argv=None):
     img_group.add_argument(
         "--no-image", action="store_true", default=False,
         help="Disable full-image classification for every experiment.",
+    )
+
+    parser.add_argument(
+        "--swir-ablation", action="store_true", default=False,
+        help="Also run the S2 SWIR ablation (four bands plus SWIR; all bands without SWIR).",
     )
 
     parser.add_argument(
@@ -180,6 +191,9 @@ def parse_args(argv=None):
 
 def resolve_config(args) -> dict:
     """Merge config.toml values with CLI overrides and return a final config dict."""
+    from src.config import DEFAULT_RANDOM_STATE
+    from src.experiments import DEFAULT_IMAGE
+
     # Determine which TOML file to load
     script_dir = Path(__file__).resolve().parent
     config_path = args.config if args.config is not None else script_dir / "config.toml"
@@ -189,7 +203,7 @@ def resolve_config(args) -> dict:
     random_state = (
         args.random_state                           # CLI wins
         if args.random_state is not None
-        else toml.get("random_state", _FALLBACK_RANDOM_STATE)
+        else toml.get("random_state", DEFAULT_RANDOM_STATE)
     )
 
     # --- enabled models ---
@@ -197,11 +211,11 @@ def resolve_config(args) -> dict:
         # CLI wins
         enabled_models = args.models if args.models else None
     else:
-        toml_models = toml.get("models", _FALLBACK_MODELS)
+        toml_models = toml.get("models", [])
         enabled_models = toml_models if toml_models else None   # [] → None (all)
 
     # --- experiments ---
-    # apply_model_on_image is now a single global boolean in config.toml
+    # apply_model_on_image is one boolean for every experiment
     apply_flag = bool(toml.get("apply_model_on_image", True))
 
     if args.experiments is not None:
@@ -211,7 +225,7 @@ def resolve_config(args) -> dict:
             for name in args.experiments
         ]
     else:
-        exp_names = toml.get("experiments", [e["name"] for e in _FALLBACK_EXPERIMENTS])
+        exp_names = toml.get("experiments", ALL_EXPERIMENTS)
         selected_experiments = [
             {"name": name, "apply_model_on_image": apply_flag}
             for name in exp_names
@@ -225,14 +239,33 @@ def resolve_config(args) -> dict:
         for exp in selected_experiments:
             exp["apply_model_on_image"] = False
 
+    image = toml.get("image", DEFAULT_IMAGE)
+
     # --- skip_plots ---
     skip_plots = args.skip_plots or toml.get("skip_plots", False)
+    swir_ablation = args.swir_ablation or toml.get("swir_ablation", False)
+
+    # --- hyperparameter tuning ---
+    tuning = {**_FALLBACK_TUNING, **toml.get("tuning", {})}
+    uncertainty = {**_FALLBACK_UNCERTAINTY, **toml.get("uncertainty", {})}
+    if args.no_tuning:
+        tuning["enabled"] = False
+
+    # --- data generation (complete run only) ---
+    data_generation = dict(toml.get("data_generation", {}))
+    data_generation["preprocess"] = args.preprocess or data_generation.get("preprocess", False)
+    data_generation["generate_points"] = args.generate_points or data_generation.get("generate_points", False)
 
     return {
         "random_state": random_state,
         "enabled_models": enabled_models,
         "selected_experiments": selected_experiments,
+        "image": image,
         "skip_plots": skip_plots,
+        "swir_ablation": swir_ablation,
+        "tuning": tuning,
+        "uncertainty": uncertainty,
+        "data_generation": data_generation,
     }
 
 
@@ -247,11 +280,11 @@ def resolve_base_path():
 
     Code Ocean mounts:
       /code    — the capsule code directory (repo root)
-      /data    — input datasets and imagery
+      /data    — input datasets, composites and raw data
       /results — output directory
 
     Local layout mirrors Code Ocean conventions:
-      <repo>/data/    — CSVs and Imagery/ subfolder
+      <repo>/data/    — CSVs and the composites/, raw/ and polygons/ subfolders
       <repo>/results/ — output directory
     """
     code_ocean_data    = Path("../data")
@@ -342,16 +375,44 @@ def main(argv=None):
     print(f"  Random state  : {cfg['random_state']}")
     print(f"  Models        : {', '.join(model_names)}  ({len(model_names)} total)")
     print(f"  Experiments   : {', '.join(exp_names)}")
-    print(f"  Image classif.: {'enabled' if any_img else 'disabled'}")
+    print(f"  Image classif.: {'enabled (' + cfg['image'] + ')' if any_img else 'disabled'}")
+    tuning = cfg["tuning"]
+    if tuning["enabled"]:
+        print(
+            f"  Tuning        : Successive Halving  ({tuning['n_candidates']} candidates, "
+            f"factor {tuning['factor']}, {tuning['cv_folds']}-fold CV "
+            f"grouped by labelled polygon and date)"
+        )
+    else:
+        print("  Tuning        : disabled (default hyperparameters)")
+    uncertainty = cfg["uncertainty"]
+    print(
+        f"  Intervals     : {uncertainty['confidence']:.0%} class-stratified bootstrap of the validation "
+        f"points by polygon ({uncertainty['n_resamples']} resamples)"
+    )
+    # The ablation is compared with the four experiments of the same run.
+    swir_ablation = cfg["swir_ablation"] and set(exp_names) == set(ALL_EXPERIMENTS)
+    print(f"  SWIR ablation : {'enabled (S2 with/without SWIR)' if swir_ablation else 'skipped'}")
     print(f"  Figures       : {'skipped' if cfg['skip_plots'] else 'enabled'}")
+    data_generation = cfg["data_generation"]
+    data_steps = [
+        step for step, key in (("Build composites from raw scenes", "preprocess"),
+                               ("Generate data points", "generate_points"))
+        if data_generation[key]
+    ]
+    print(f"  Data generation: {', '.join(data_steps) if data_steps else 'disabled (data/*.csv used as is)'}")
     print()
 
     # Build step plan
     plan_steps = [
+        *data_steps,
         "Load datasets",
         f"Run experiments  ({len(exp_list)} exp × {len(model_names)} model(s)"
+        + ("  [+tuning]" if tuning["enabled"] else "")
         + ("  [+image]" if any_img else "") + ")",
     ]
+    if swir_ablation:
+        plan_steps.append(f"Run S2 SWIR ablation  (2 image sets × {len(model_names)} model(s))")
     if not cfg["skip_plots"]:
         plan_steps.append("Generate figures")
     total_steps = len(plan_steps)
@@ -375,11 +436,11 @@ def main(argv=None):
     if str(base) not in sys.path:
         sys.path.insert(0, str(base))
 
-    from src.config import build_models
+    from src.config import CLASS_NAMES, build_models
     from src.paths import setup_paths
-    from src.download import ensure_imagery
-    from src.data import load_datasets
-    from src.experiments import run_all_experiments
+    from src.download import ensure_composites
+    from src.data import load_datasets, sample_counts
+    from src.experiments import RESULTS_FILENAME, run_all_experiments
     from src.plotting import (
         load_plot_data,
         plot_scatter_from_mode,
@@ -387,55 +448,110 @@ def main(argv=None):
         plot_satellite_impact,
         plot_band_impact,
         plot_scatter_combined,
+        plot_confusion_matrices,
     )
+    from src.visual_inspection import plot_visual_inspection
+    from src.swir_ablation import run_swir_ablation
 
     paths = setup_paths(base=base)
     
     # Override dataset/results paths when running on Code Ocean
     if datasets_dir != base / "data":
         paths["datasets_path"] = datasets_dir
+        data = datasets_dir.resolve()
+        paths.update({
+            "data_path": data,
+            "raw_path": data / "raw",
+            "PS_raw": data / "raw" / "PlanetScope",
+            "S2_raw": data / "raw" / "Sentinel-2",
+            "polygons_path": data / "polygons",
+            "composites_path": data / "composites",
+            "PS_composites": data / "composites" / "PlanetScope",
+            "S2_composites": data / "composites" / "Sentinel-2",
+        })
         paths["results_path"]  = results_dir
         paths["figures_path"]  = results_dir / "figures"
         paths["maps_path"]     = results_dir / "maps"
         paths["figures_path"].mkdir(parents=True, exist_ok=True)
         (paths["maps_path"] / "PNG").mkdir(parents=True, exist_ok=True)
         (paths["maps_path"] / "TIFF").mkdir(parents=True, exist_ok=True)
+        if Path("/scratch").exists():  # Code Ocean's temporary folder
+            paths["scratch_path"] = Path("/scratch")
 
-    # Ensure imagery is available only if any experiment requires image classification
+    # Ensure the composites are available only if any experiment requires image classification
     if any_img:
-        ensure_imagery(paths)
+        ensure_composites(paths)
     else:
-        print("[OK] Full-image classification disabled. Skipping imagery download.")
+        print("[OK] Full-image classification disabled. Skipping composites download.")
 
-    # -- Step 1: Load datasets ----------------------------------
-    print(f"\n[1/{total_steps}] Loading datasets...")
+    step = 0
+
+    # -- Optional steps: data generation (complete run) -----------
+    if data_steps:
+        check_requirements("requirements-data.txt")
+        from src.preprocessing import settings
+        data_settings = settings(data_generation)
+    if data_generation["preprocess"]:
+        from src.preprocessing import build_all
+        step += 1
+        print(f"\n[{step}/{total_steps}] Building composites...")
+        report = build_all(paths, data_settings)
+        report.to_csv(paths["scratch_path"] / "preprocessing_report.csv", index=False)
+        print("    [OK] Composites built (report -> preprocessing_report.csv in scratch).")
+    if data_generation["generate_points"]:
+        from src.generate_data_points import generate
+        step += 1
+        print(f"\n[{step}/{total_steps}] Generating data points...")
+        summary = generate(paths, data_settings, cfg["random_state"])
+        summary.to_csv(paths["scratch_path"] / "data_points_summary.csv", index=False)
+        print("    [OK] Data points written (summary -> data_points_summary.csv in scratch).")
+
+    # -- Step: Load datasets -------------------------------------
+    step += 1
+    print(f"\n[{step}/{total_steps}] Loading datasets...")
     datasets = load_datasets(paths)
-    print("    [OK] Datasets loaded.\n")
+    sample_counts(datasets).to_csv(paths["results_path"] / "sample_counts.csv", index=False)
+    print("    [OK] Datasets loaded (sample counts -> sample_counts.csv).\n")
 
-    # -- Step 2: Run experiments --------------------------------
-    print(f"[2/{total_steps}] Running experiments...")
+    # -- Step: Run experiments ----------------------------------
+    step += 1
+    print(f"[{step}/{total_steps}] Running experiments...")
     models  = build_models(cfg["random_state"], cfg["enabled_models"])
     results = run_all_experiments(
     cfg["selected_experiments"],
     models,
     datasets,
     paths,
+    tuning=tuning,
+    random_state=cfg["random_state"],
+    uncertainty=cfg["uncertainty"],
+    image=cfg["image"],
     )
     print(f"\n    [OK] All experiments complete.")
-    print(f"      Results -> {paths['results_path'] / 'model_results.xlsx'}")
+    RESULTS_FILE = paths["results_path"] / RESULTS_FILENAME
+    CONFUSION_FILE = paths["results_path"] / RESULTS_FILENAME.replace("model_results", "confusion_matrices")
+    print(f"      Results -> {RESULTS_FILE}")
+
+    # -- Optional step: S2 SWIR ablation (SM Section B.3) --------
+    if swir_ablation:
+        step += 1
+        print(f"\n[{step}/{total_steps}] Running the S2 SWIR ablation...")
+        run_swir_ablation(build_models(cfg["random_state"], cfg["enabled_models"]), datasets, paths,
+                          tuning=tuning, random_state=cfg["random_state"], uncertainty=cfg["uncertainty"])
+        print("    [OK] SWIR ablation complete (results/swir_ablation/).")
 
     # -- Step 3 (optional): Generate figures ---------------------
     if cfg["skip_plots"]:
         _print_all_done(paths["results_path"])
         return
 
-    RESULTS_FILE = paths["results_path"] / "model_results.xlsx"
     if not RESULTS_FILE.exists():
         print(f"\n    [!]  Results file not found at {RESULTS_FILE}. Skipping figures.")
         _print_all_done(paths["results_path"])
         return
 
-    print(f"\n[3/{total_steps}] Generating figures...")
+    step += 1
+    print(f"\n[{step}/{total_steps}] Generating figures...")
     plot_data = load_plot_data(RESULTS_FILE)
 
     _plot_calls = [
@@ -447,6 +563,12 @@ def main(argv=None):
         ("Fig_B.2_Satellite impact", lambda: plot_satellite_impact(RESULTS_FILE, paths["figures_path"])),
         ("Fig_B.3_Band impact",      lambda: plot_band_impact(RESULTS_FILE,      paths["figures_path"])),
         ("Fig_B.4_OA/Kappa bars",    lambda: plot_oa_kappa_bars(RESULTS_FILE,   paths["figures_path"])),
+        ("Figure2_Visual inspection", lambda: plot_visual_inspection(
+                                 paths, paths["results_path"], paths["figures_path"],
+                             )),
+        ("Fig_B.6_Confusion matrices", lambda: plot_confusion_matrices(
+                                 RESULTS_FILE, CONFUSION_FILE, paths["figures_path"], CLASS_NAMES,
+                             )),
     ]
 
     _saved, _skipped = [], []

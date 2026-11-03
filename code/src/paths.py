@@ -37,11 +37,21 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
     datasets_path = data_path
 
-    images_path = data_path / "Imagery"
+    # Data generation (complete run): raw scenes, reference polygons and composites
+    # (the composites are also downloaded by src.download for full-image classification)
+    raw_path = data_path / "raw"
 
-    S2_imagery = images_path / "S2"
+    PS_raw = raw_path / "PlanetScope"
 
-    PS_imagery = images_path / "PS"
+    S2_raw = raw_path / "Sentinel-2"
+
+    polygons_path = data_path / "polygons"
+
+    composites_path = data_path / "composites"
+
+    PS_composites = composites_path / "PlanetScope"
+
+    S2_composites = composites_path / "Sentinel-2"
 
     # ------------------------------------------------------------------
     # Outputs
@@ -53,15 +63,10 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
     maps_path = results_path / "maps"
 
-    maps_png_path = maps_path / "PNG"
-
-    maps_tif_path = maps_path / "TIFF"
-
     models_path = results_path / "Models"
 
-    logs_path = results_path / "Logs"
-
-    metadata_path = results_path / "Metadata"
+    # Temporary/internal files, not part of the published results (git-ignored).
+    scratch_path = base / "scratch"
 
     # ------------------------------------------------------------------
     # Create directories
@@ -70,17 +75,15 @@ def setup_paths(base: Path | str | None = None) -> dict:
     directories = [
         data_path,
         datasets_path,
-        images_path,
-        S2_imagery,
-        PS_imagery,
+        S2_composites,
+        PS_composites,
         results_path,
         figures_path,
         maps_path,
-        maps_png_path,
-        maps_tif_path,
+        maps_path / "PNG",   # classification maps, written by src.training
+        maps_path / "TIFF",
         models_path,
-        logs_path,
-        metadata_path,
+        scratch_path,
     ]
 
     for directory in directories:
@@ -92,20 +95,21 @@ def setup_paths(base: Path | str | None = None) -> dict:
         "data_path": data_path,
         "datasets_path": datasets_path,
 
-        "images_path": images_path,
-        "S2_imagery": S2_imagery,
-        "PS_imagery": PS_imagery,
+        "raw_path": raw_path,
+        "PS_raw": PS_raw,
+        "S2_raw": S2_raw,
+        "polygons_path": polygons_path,
+        "composites_path": composites_path,
+        "PS_composites": PS_composites,
+        "S2_composites": S2_composites,
 
         "results_path": results_path,
         "figures_path": figures_path,
 
         "maps_path": maps_path,
-        "maps_png_path": maps_png_path,
-        "maps_tif_path": maps_tif_path,
 
         "models_path": models_path,
-        "logs_path": logs_path,
-        "metadata_path": metadata_path,
+        "scratch_path": scratch_path,
     }
 
 
@@ -115,7 +119,7 @@ def setup_paths(base: Path | str | None = None) -> dict:
 
 def get_image_lists(paths: dict) -> dict:
     """
-    Return the imagery currently available on disk.
+    Return the composites currently available on disk (data/composites/<sensor folder>).
 
     Returns
     -------
@@ -128,24 +132,6 @@ def get_image_lists(paths: dict) -> dict:
     """
 
     return {
-        "S2": sorted(paths["S2_imagery"].glob("*.tif")),
-        "PS": sorted(paths["PS_imagery"].glob("*.tif")),
-    }
-
-
-def count_images(paths: dict) -> dict:
-    """
-    Count available images.
-
-    Returns
-    -------
-    dict
-        {"S2": n, "PS": n}
-    """
-
-    images = get_image_lists(paths)
-
-    return {
-        key: len(value)
-        for key, value in images.items()
+        "S2": sorted(paths["S2_composites"].glob("S2_*.tif")),
+        "PS": sorted(paths["PS_composites"].glob("PS_*.tif")),
     }
