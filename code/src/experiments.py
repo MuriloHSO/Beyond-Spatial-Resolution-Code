@@ -245,7 +245,8 @@ def run_all_experiments(
             paths["results_path"] / name.replace("model_results", "validation_predictions").replace(".csv", ".csv.gz"),
             index=False,
         )
-        differences.to_csv(paths["results_path"] / name.replace("model_results", "sensor_differences"), index=False)
+        if not differences.empty:  # needs S2 and PS experiments of the same classifier
+            differences.to_csv(paths["results_path"] / name.replace("model_results", "sensor_differences"), index=False)
     combined.drop(columns=INTERNAL_COLUMNS, errors="ignore").to_csv(paths["results_path"] / name, index=False)
     # Per-class metrics and confusion matrices on the validation set.
     if selected_results:

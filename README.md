@@ -21,7 +21,7 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
     - `plotting.py` — all figure-generation functions
 
 `data/` - input data directory (mirrors Code Ocean's `/data`):
-- Point CSVs: `S2_TrainTest.csv`, `S2_Validation.csv` (Sentinel-2) and `PS_TrainTest.csv`, `PS_Validation.csv` (PlanetScope), the train-test and validation points, the same points for both sensors. The S2 tables are included in this repository and in `points/` of the [Hugging Face dataset](https://huggingface.co/datasets/marlonfs/agricultural-plastic-PS-S2). The PS tables are **not distributed** (see Licences): rebuild them from your own Planet orders (see Data generation); `run.py` needs all four tables. The `Class` column holds the class code of each point (0 = plastic-mulched farmland, PMF; 1 = plastic greenhouses, PGH; 2 = others); the task is a single three-class problem (plastic-mulched farmland, plastic greenhouses and others) solved by one multiclass model per experiment.
+- Point CSVs: `S2_TrainTest.csv`, `S2_Validation.csv` (Sentinel-2) and `PS_TrainTest.csv`, `PS_Validation.csv` (PlanetScope), the train-test and validation points, the same points for both sensors. The S2 tables are included in this repository and in `points/` of the [Hugging Face dataset](https://huggingface.co/datasets/marlonfs/agricultural-plastic-PS-S2). The PS tables are **not distributed** (see Licences): rebuild them from your own Planet orders (see Data generation). Without them, `run.py` runs only the S2 experiments and skips the PS experiments, the S2 − PS differences (`sensor_differences.csv`) and the figures that need both sensors; the results of the full run are in `results/`. The `Class` column holds the class code of each point (0 = plastic-mulched farmland, PMF; 1 = plastic greenhouses, PGH; 2 = others); the task is a single three-class problem (plastic-mulched farmland, plastic greenhouses and others) solved by one multiclass model per experiment.
 - `composites/Sentinel-2/` — the S2 3-time-series composites (GeoTIFF, one per ROI and reference date) from the [Hugging Face dataset](https://huggingface.co/datasets/marlonfs/agricultural-plastic-PS-S2) (not included; about 0.9 GB). Full-image classification uses them; `run.py` downloads them into an empty folder when it is enabled, and `python -m src.download` from the `code` folder downloads them alone.
 - `composites/PlanetScope/` — the PS composites are **not distributed**: the scenes were obtained through Planet's Education and Research Program, whose terms do not allow sharing products that retain Planet's image data. Build them from your own Planet orders with `python -m src.preprocessing PS`; the instructions and the list of scenes used (`PS_scenes.csv`) are in [`data/composites/PlanetScope/README.md`](data/composites/PlanetScope/README.md). Without them, PS full-image classification is skipped.
 - `raw/PlanetScope/`, `raw/Sentinel-2/`, `polygons/` — raw scenes and reference polygons, needed to rebuild the composites and the CSVs (see Data generation); the polygons are also drawn in Fig. 2 of the paper.
@@ -40,7 +40,7 @@ This repository contains the reference code for the paper ["Beyond Spatial Resol
 
 `scratch/` - temporary and internal files, not part of the results (git-ignored), e.g. the breakdown of the training time (`time_breakdown.csv`).
 
-`environment/Dockerfile` and `.codeocean/environment.json` - computational environment of the Code Ocean capsule (managed by Code Ocean).
+`environment/Dockerfile` - computational environment of the Code Ocean capsule: Code Ocean's Ubuntu 22.04 base image, Python 3.14.7 installed with uv in `/opt/venv`, and the package versions of `code/requirements.txt`.
 
 ## Quick Start
 1. Clone this repository: 
@@ -71,7 +71,7 @@ All user-facing settings live in [`code/config.toml`](code/config.toml):
 | `data_generation.windows` | Start and end (exclusive) of the t0, t1, t2 windows, in days from the reference date |
 | `data_generation.train_test_points`, `validation_points` | Points per class in each set |
 | `data_generation.sentinel2.*` | S2 scene cloud filter (per window, from 20 % rising by 10 % until 3 days cover the ROI) and Cloud Score+ clear threshold (`cs_cdf_threshold`) |
-| `experiments` | List of experiment names to run |
+| `experiments` | List of experiment names to run (default `S2_4b`, `S2_Allb`; add `PS_4b`, `PS_Allb` once the PS point tables are in `data/`) |
 | `models` | List of models to run (empty list = all seven) |
 | `tuning.enabled` | `true` to tune every model's hyperparameters before evaluation; `false` to use scikit-learn defaults (also `--no-tuning`) |
 | `tuning.n_candidates` | Random hyperparameter configurations sampled per model |
