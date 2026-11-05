@@ -6,6 +6,14 @@ Dataset loading utilities.
 
 import pandas as pd
 
+# PS point tables: not distributed (Planet's licence; see README), so they may be absent.
+PS_TABLES = ("PS_TrainTest.csv", "PS_Validation.csv")
+
+
+def ps_tables_present(datasets_path) -> bool:
+    """True if both PS point tables are in *datasets_path*."""
+    return all((datasets_path / name).exists() for name in PS_TABLES)
+
 
 def _read(path) -> pd.DataFrame:
     """One point table; rows with a missing value are dropped (Polygon_ID is empty for "others" by design)."""
@@ -15,7 +23,7 @@ def _read(path) -> pd.DataFrame:
 
 def load_datasets(paths: dict) -> dict:
     """
-    Load the four CSV datasets from disk.
+    Load the CSV datasets from disk; the PS tables only if both are present.
 
     Parameters
     ----------
@@ -25,21 +33,18 @@ def load_datasets(paths: dict) -> dict:
     Returns
     -------
     dict with keys:
-        df_s2train, df_s2val, df_psstrain, df_pssval
+        df_s2train, df_s2val, and df_psstrain, df_pssval when the PS tables are present
     """
     datasets_path = paths["datasets_path"]
 
-    df_s2train = _read(datasets_path / "S2_TrainTest.csv")
-    df_s2val = _read(datasets_path / "S2_Validation.csv")
-    df_psstrain = _read(datasets_path / "PS_TrainTest.csv")
-    df_pssval = _read(datasets_path / "PS_Validation.csv")
-
-    return {
-        "df_s2train": df_s2train,
-        "df_s2val": df_s2val,
-        "df_psstrain": df_psstrain,
-        "df_pssval": df_pssval,
+    datasets = {
+        "df_s2train": _read(datasets_path / "S2_TrainTest.csv"),
+        "df_s2val": _read(datasets_path / "S2_Validation.csv"),
     }
+    if ps_tables_present(datasets_path):
+        datasets["df_psstrain"] = _read(datasets_path / "PS_TrainTest.csv")
+        datasets["df_pssval"] = _read(datasets_path / "PS_Validation.csv")
+    return datasets
 
 
 def sample_counts(datasets: dict) -> pd.DataFrame:
@@ -63,6 +68,8 @@ def sample_counts(datasets: dict) -> pd.DataFrame:
     }
     rows = []
     for (sensor, subset), key in subsets.items():
+        if key not in datasets:
+            continue
         for label, n in datasets[key]["Class"].value_counts().sort_index().items():
             rows.append([sensor, subset, label, int(n)])
     return pd.DataFrame(rows, columns=["Sensor", "Subset", "Class", "Points"])

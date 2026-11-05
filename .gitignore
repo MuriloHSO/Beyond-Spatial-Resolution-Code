@@ -10,9 +10,13 @@
 /data/composites/PlanetScope/*
 !/data/composites/PlanetScope/README.md
 !/data/composites/PlanetScope/PS_scenes.csv
+!/data/composites/Sentinel-2/
+/data/composites/Sentinel-2/*
+!/data/composites/Sentinel-2/Run python -m src.download in code to place S2 composites here
 
 __pycache__/
 scratch/
+.gitignore
 
 # Claude Code (local only)
 CLAUDE.md

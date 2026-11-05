@@ -1,0 +1,2 @@
+Run `python -m src.download` from the code folder to place the Sentinel-2 (S2) composites here (S2_<ROI>_<YYYY-MM-DD>.tif, about 0.9 GB, from the Hugging Face dataset marlonfs/agricultural-plastic-PS-S2).
+run.py downloads them when full-image classification is enabled. They can also be rebuilt from the raw scenes with `python run.py --preprocess` (see README, Data generation).

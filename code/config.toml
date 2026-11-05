@@ -56,12 +56,16 @@ data_generation.sentinel2.cs_cdf_threshold = 0.60
 # experiments          : which experiments to run.
 #                        Valid: "S2_4b", "S2_Allb", "PS_4b", "PS_Allb"
 #                        Comment out or remove names to skip them.
+#                        The PS experiments are off by default: they need the PS point
+#                        tables (data/PS_TrainTest.csv, data/PS_Validation.csv), which are
+#                        not distributed (Planet's licence; see README, Data generation).
+#                        Uncomment them once you have built the tables.
 
 experiments = [
     "S2_4b",
     "S2_Allb",
-    "PS_4b",
-    "PS_Allb",
+    # "PS_4b",
+    # "PS_Allb",
 ]
 
 # -----------------------------------------------------------------------------

@@ -362,6 +362,19 @@ def _print_all_done(results_path):
 def main(argv=None):
     args = parse_args(argv)
     cfg  = resolve_config(args)
+    base, datasets_dir, results_dir = resolve_base_path()
+
+    # The PS point tables are not distributed (Planet's licence, see README): without them,
+    # the PS experiments are skipped, unless this run generates the points.
+    from src.data import PS_TABLES, ps_tables_present
+    ps_skipped = []
+    if not cfg["data_generation"]["generate_points"] and not ps_tables_present(datasets_dir):
+        ps_skipped = [e["name"] for e in cfg["selected_experiments"] if e["name"].startswith("PS_")]
+        cfg["selected_experiments"] = [e for e in cfg["selected_experiments"] if not e["name"].startswith("PS_")]
+        if not cfg["selected_experiments"]:
+            print(f"No experiment to run: the PS point tables ({', '.join(PS_TABLES)}) are not in "
+                  f"{datasets_dir} (not distributed; see README, Data generation).")
+            raise SystemExit(1)
 
     # -- Welcome ---------------------------------------------------------
     _print_banner()
@@ -375,6 +388,9 @@ def main(argv=None):
     print(f"  Random state  : {cfg['random_state']}")
     print(f"  Models        : {', '.join(model_names)}  ({len(model_names)} total)")
     print(f"  Experiments   : {', '.join(exp_names)}")
+    if ps_skipped:
+        print(f"  Skipped       : {', '.join(ps_skipped)} (PS point tables not in {datasets_dir}: "
+              f"not distributed, see README, Data generation)")
     print(f"  Image classif.: {'enabled (' + cfg['image'] + ')' if any_img else 'disabled'}")
     tuning = cfg["tuning"]
     if tuning["enabled"]:
@@ -430,8 +446,6 @@ def main(argv=None):
         pass
 
     # -- Path setup ----------------------------------------------
-    base, datasets_dir, results_dir = resolve_base_path()
-
     # Adjust sys.path so that `from src.xxx import ...` works in all layouts
     if str(base) not in sys.path:
         sys.path.insert(0, str(base))
