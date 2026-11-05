@@ -119,7 +119,7 @@ def tune_model(model_name, model, X_train, y_train, groups, tuning: dict, random
 
     Returns
     -------
-    (tuned_model, best_params, best_score, tuning_time)
+    (tuned_model, best_params, tuning_time)
         *tuned_model* is an unfitted clone of *model* with the best
         hyperparameters set.
     """
@@ -147,4 +147,4 @@ def tune_model(model_name, model, X_train, y_train, groups, tuning: dict, random
     best_params = {k.removeprefix("model__"): v for k, v in search.best_params_.items()}
     tuned_model = clone(model).set_params(**best_params)
 
-    return tuned_model, best_params, float(search.best_score_), tuning_time
+    return tuned_model, best_params, tuning_time

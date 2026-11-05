@@ -7,7 +7,7 @@ Experiment definitions and the dispatcher that runs them.
 import numpy as np
 import pandas as pd
 from .config import DEFAULT_RANDOM_STATE
-from .training import INTERNAL_COLUMNS, train_and_evaluate_model
+from .training import train_and_evaluate_model
 from .paths import get_image_lists
 from .tuning import polygon_groups
 from .uncertainty import confusion_counts, interval, metrics_from_confusion, validation_resamples
@@ -259,17 +259,12 @@ def run_all_experiments(
         )
         if not differences.empty:  # needs S2 and PS experiments of the same classifier
             differences.to_csv(paths["results_path"] / name.replace("model_results", "sensor_differences"), index=False)
-    combined.drop(columns=INTERNAL_COLUMNS, errors="ignore").to_csv(paths["results_path"] / name, index=False)
+    combined.to_csv(paths["results_path"] / name, index=False)
     # Per-class metrics and confusion matrices on the validation set.
     if selected_results:
         class_metrics.to_csv(paths["results_path"] / name.replace("model_results", "class_metrics"), index=False)
         pd.concat(selected_confusion, ignore_index=True).to_csv(
             paths["results_path"] / name.replace("model_results", "confusion_matrices"), index=False
-        )
-    # Breakdown of the training time (search, final fit, inner-CV OA): internal, not part of results/.
-    if not combined.empty:
-        combined[["Imagery", "Models", *INTERNAL_COLUMNS]].to_csv(
-            paths["scratch_path"] / name.replace("model_results", "time_breakdown"), index=False
         )
     return combined
 

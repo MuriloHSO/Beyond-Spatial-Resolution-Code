@@ -31,9 +31,6 @@ from threadpoolctl import ThreadpoolController
 from .config import DEFAULT_RANDOM_STATE
 from .tuning import tune_model
 
-# Breakdown of the training time, kept out of results/ (written to scratch/ by the dispatcher).
-INTERNAL_COLUMNS = ["Tuning Time (s)", "Final Fit Time (s)", "Tuning CV OA"]
-
 # Red, green and blue bands at t0 of each sensor's composite, for the image preview.
 RGB_BANDS = {"S2": ["B4_0", "B3_0", "B2_0"], "PS": ["B6_0", "B4_0", "B2_0"]}
 
@@ -188,9 +185,9 @@ def train_and_evaluate_model(
     n_models = len(models)
     for model_idx, (model_name, model) in enumerate(models.items(), 1):
         # Hyperparameter tuning (train-test set only)
-        best_params, tuning_score, tuning_time = {}, np.nan, np.nan
+        best_params, tuning_time = {}, np.nan
         if tuning and tuning.get("enabled", False):
-            model, best_params, tuning_score, tuning_time = tune_model(
+            model, best_params, tuning_time = tune_model(
                 model_name, model, X_train, y_train, groups, tuning, random_state
             )
 
@@ -276,9 +273,6 @@ def train_and_evaluate_model(
                 round(classification_time, 6) if apply_model_on_image else np.nan,
                 classification_time_std,
                 _format_params(best_params, full_precision=True),
-                round(tuning_time, 6),
-                round(training_time, 6),
-                round(tuning_score, 6),
             ]
         )
 
@@ -323,7 +317,6 @@ def train_and_evaluate_model(
             "Classification Time (s)",
             "Classification Time Std (s)",
             "Best Params",
-            *INTERNAL_COLUMNS,
         ],
     )
 
