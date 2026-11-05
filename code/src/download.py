@@ -26,7 +26,7 @@ from huggingface_hub import snapshot_download
 from src.paths import get_image_lists, setup_paths
 
 REPO_ID = "marlonfs/agricultural-plastic-PS-S2"
-REVISION = "15c18f4590376b75a8f9508e19d749081213e2d9"  # dataset commit "Data of the paper: S2 composites, ..."
+REVISION = "632f207c6be84b759f39d8c3bb0738443eb4543d"  # dataset commit of 2026-11-03 (data, card and points/README.md)
 
 # Sensors whose composites are distributed on Hugging Face (PS: see the module docstring).
 SENSOR_FOLDERS = {"S2": "Sentinel-2"}
