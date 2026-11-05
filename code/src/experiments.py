@@ -65,7 +65,8 @@ def _get_imagery(paths, sensor, image=DEFAULT_IMAGE):
 # ---------------------------------------------------------------------------
 
 def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image,
-                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE,
+                         save_fitted=True):
     X,  y  = datasets["df_s2train"][S2_BANDS_4], datasets["df_s2train"]["Class"]
     groups = _tuning_groups(datasets["df_s2train"], tuning)
     X2, y2 = datasets["df_s2val"][S2_BANDS_4],   datasets["df_s2val"]["Class"]
@@ -79,11 +80,13 @@ def run_experiment_S2_4b(models, datasets, paths, apply_model_on_image,
         random_state=random_state,
         groups=groups,
         models_path=paths["models_path"],
+        save_fitted=save_fitted,
     )
 
 
 def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image,
-                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE,
+                         save_fitted=True):
     X,  y  = datasets["df_s2train"][S2_BANDS_ALL], datasets["df_s2train"]["Class"]
     groups = _tuning_groups(datasets["df_s2train"], tuning)
     X2, y2 = datasets["df_s2val"][S2_BANDS_ALL],   datasets["df_s2val"]["Class"]
@@ -97,11 +100,13 @@ def run_experiment_S2_Allb(models, datasets, paths, apply_model_on_image,
         random_state=random_state,
         groups=groups,
         models_path=paths["models_path"],
+        save_fitted=save_fitted,
     )
 
 
 def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image,
-                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE,
+                         save_fitted=True):
     X,  y  = datasets["df_psstrain"][PS_BANDS_4], datasets["df_psstrain"]["Class"]
     groups = _tuning_groups(datasets["df_psstrain"], tuning)
     X2, y2 = datasets["df_pssval"][PS_BANDS_4],   datasets["df_pssval"]["Class"]
@@ -115,11 +120,13 @@ def run_experiment_PS_4b(models, datasets, paths, apply_model_on_image,
         random_state=random_state,
         groups=groups,
         models_path=paths["models_path"],
+        save_fitted=save_fitted,
     )
 
 
 def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image,
-                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE):
+                         tuning=None, random_state=DEFAULT_RANDOM_STATE, image=DEFAULT_IMAGE,
+                         save_fitted=True):
     X,  y  = datasets["df_psstrain"][PS_BANDS_ALL], datasets["df_psstrain"]["Class"]
     groups = _tuning_groups(datasets["df_psstrain"], tuning)
     X2, y2 = datasets["df_pssval"][PS_BANDS_ALL],   datasets["df_pssval"]["Class"]
@@ -133,6 +140,7 @@ def run_experiment_PS_Allb(models, datasets, paths, apply_model_on_image,
         random_state=random_state,
         groups=groups,
         models_path=paths["models_path"],
+        save_fitted=save_fitted,
     )
 
 
@@ -161,6 +169,7 @@ def run_all_experiments(
     random_state: int = DEFAULT_RANDOM_STATE,
     uncertainty: dict = None,
     image: str = DEFAULT_IMAGE,
+    save_fitted: bool = True,
 ) -> pd.DataFrame:
     """
     Run a list of experiments and return the combined results DataFrame.
@@ -187,6 +196,8 @@ def run_all_experiments(
     image : str
         ROI and reference date of the composite classified in full-image
         classification, as in its file name (e.g. ``"Holambra_2022-12-15"``).
+    save_fitted : bool
+        If ``False``, only the JSON record of each model is saved (no ``.joblib``).
 
     Returns
     -------
@@ -223,6 +234,7 @@ def run_all_experiments(
             tuning=tuning,
             random_state=random_state,
             image=image,
+            save_fitted=save_fitted,
         )
         selected_results.append(results_i)
         selected_class_metrics.append(class_metrics_i)

@@ -244,6 +244,7 @@ def resolve_config(args) -> dict:
     # --- skip_plots ---
     skip_plots = args.skip_plots or toml.get("skip_plots", False)
     swir_ablation = args.swir_ablation or toml.get("swir_ablation", False)
+    save_fitted_models = bool(toml.get("save_fitted_models", False))
 
     # --- hyperparameter tuning ---
     tuning = {**_FALLBACK_TUNING, **toml.get("tuning", {})}
@@ -263,6 +264,7 @@ def resolve_config(args) -> dict:
         "image": image,
         "skip_plots": skip_plots,
         "swir_ablation": swir_ablation,
+        "save_fitted_models": save_fitted_models,
         "tuning": tuning,
         "uncertainty": uncertainty,
         "data_generation": data_generation,
@@ -409,6 +411,7 @@ def main(argv=None):
     # The ablation is compared with the four experiments of the same run.
     swir_ablation = cfg["swir_ablation"] and set(exp_names) == set(ALL_EXPERIMENTS)
     print(f"  SWIR ablation : {'enabled (S2 with/without SWIR)' if swir_ablation else 'skipped'}")
+    print(f"  Model files   : {'JSON + .joblib' if cfg['save_fitted_models'] else 'JSON only'}")
     print(f"  Figures       : {'skipped' if cfg['skip_plots'] else 'enabled'}")
     data_generation = cfg["data_generation"]
     data_steps = [
@@ -542,6 +545,7 @@ def main(argv=None):
     random_state=cfg["random_state"],
     uncertainty=cfg["uncertainty"],
     image=cfg["image"],
+    save_fitted=cfg["save_fitted_models"],
     )
     print(f"\n    [OK] All experiments complete.")
     RESULTS_FILE = paths["results_path"] / RESULTS_FILENAME
