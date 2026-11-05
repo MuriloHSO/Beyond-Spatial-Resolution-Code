@@ -486,7 +486,9 @@ def main(argv=None):
         paths["results_path"]  = results_dir
         paths["figures_path"]  = results_dir / "figures"
         paths["maps_path"]     = results_dir / "maps"
+        paths["models_path"]   = results_dir / "Models"
         paths["figures_path"].mkdir(parents=True, exist_ok=True)
+        paths["models_path"].mkdir(parents=True, exist_ok=True)
         (paths["maps_path"] / "PNG").mkdir(parents=True, exist_ok=True)
         (paths["maps_path"] / "TIFF").mkdir(parents=True, exist_ok=True)
         if Path("/scratch").exists():  # Code Ocean's temporary folder
