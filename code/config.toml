@@ -138,5 +138,12 @@ uncertainty.confidence = 0.95
 swir_ablation = false
 
 # -----------------------------------------------------------------------------
+# Fitted models in results/Models/: the JSON record of every model (hyperparameters,
+# features, scaler statistics, seed and versions, enough to refit it exactly) is
+# always saved. Set to true to also save the fitted models (.joblib, scaler +
+# model); Figure 2 (visual inspection) needs them.
+save_fitted_models = false
+
+# -----------------------------------------------------------------------------
 # Whether to generate figures after the experiments.
 skip_plots = false
